@@ -11,7 +11,11 @@ import (
 )
 
 func TestCreateUser(t *testing.T) {
-	database.InitDB()
+	if err := database.InitDB(); err != nil {
+		t.Errorf("Failed: %v", err)
+		return
+	}
+
 	userrepo := repository.NewSQLUserRepository(database.DB)
 	auth := service.NewAuthService(userrepo, repository.NewAuthRepository(database.DB), jwt.NewJWTService())
 	serv := service.NewUserService(userrepo)

@@ -31,7 +31,7 @@ func NewApplication(cfg *config.Config) *Application {
 	r := gin.Default()
 
 	if err := database.InitDB(); err != nil {
-		log.Fatal("unable to connnect to db")
+		log.Fatalf("unable to connnect to db: %v", err)
 	}
 
 	ctx := &ModuleContext{

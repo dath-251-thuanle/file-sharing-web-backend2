@@ -13,6 +13,7 @@ type SystemPolicy struct {
 	DefaultValidityDays      int
 	RequirePasswordMinLength int
 }
+
 type DatabaseConfig struct {
 	Host     string
 	Port     string
