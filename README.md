@@ -24,14 +24,18 @@ Tính năng:
     - Có thể chia sẻ với danh sách người dùng khác.
 
 ## Danh sách thành viên
-| Student ID | Full Name            | Role                        
-|:----------:|:--------------------:|:-------:|
-| 1234567    | Đậu Minh Khôi        |         |
-| 1234567    | Đậu Minh Khôi        |         | 
-| 1234567    | Đậu Minh Khôi        |         |
-| 1234567    | Đậu Minh Khôi        |         |
-| 1234567    | Đậu Minh Khôi        |         |
-| 1234567    | Đậu Minh Khôi        |         |
+| MSSV | Họ tên            | Công việc    |
+| ----------:|:-------------------- |:------- |
+| 2311159    | Lê Thanh Huy         | NHÓM A |
+| 2311681    | Nguyễn Đình Khôi     | NHÓM A |
+| 1234567    | Đậu Minh Khôi        | NHÓM A, Class Diagram |
+| 2311888    | Cao Vũ Hoàng Long    | NHÓM B |
+| 2311906    | Nguyễn Hoàng Long    | NHÓM B |
+| 2312955    | Đặng Hải Sơn         | NHÓM B, Use Case diagram  |
+
+***NHÓM A: DATABASE DESIGN, API (Admin, System Management, File Management)**
+
+***NHÓM B: API (Authentication, User Management, Statistics & Analytics)**
 
 ## Cấu trúc thư mục
 ```bash
@@ -107,25 +111,51 @@ Tính năng:
 
 ## Yêu cầu hệ thống
 
+- Cần có: Docker, PostresSQL, Golang (kèm thư viện Gin)
+- Không bắt buộc:
+    - Postman: kiểm thử API.
+
 ## Hướng dẫn cài đặt
 
+Setup docker:
+```
+docker run --name postgres-db -e POSTGRES_PASSWORD=postgres -p 5435:5432 -d postgres
+```
+
+Tạo user và database:
+```
+docker exec -it postgres-db psql -U postgres
+
+# Đã vào shell của postgres
+
+CREATE USER haixon WITH PASSWORD "123456";
+CREATE DATABASE "file-sharing";
+exit
+```
+
+Vào `cmd/server` của repo và chạy:
+```
+go run main.go
+```
+
+Ở đây có thể dùng Postman hoặc curl để kiểm thử các API.
+
 ## Workflow
-**1. Clone repository**
+
+**1. Fork repository**
+
+**2. Clone repository**
 ```bash
 git clone <repo-url>
 ```
 
-**2. Create a new branch**
-```bash
-git checkout -b feature
-```
-**3. Adding your changes**
+**3. Thêm các thay đổi**
 
-**4. Commit & Push your branch**
+**4. Commit và Push branch của bạn**
 ```bash
 git add .
-git commit -m "Your message"
-git push origin feature/your-feuture
+git commit -m "Tên commit"
+git push origin <nhánh của bạn>
 ```
 
-**5. Create your new pull request**
+**5. Tạo pull request trên trang Github hoặc github-cli**
