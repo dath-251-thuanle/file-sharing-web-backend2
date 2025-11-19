@@ -22,7 +22,7 @@ func (s *adminService) GetSystemPolicy(ctx context.Context) (*config.SystemPolic
 	return s.cfg.Policy, nil
 }
 
-func (s *adminService) UpdateSystemPolicy(ctx context.Context, updates map[string]interface{}) (*config.SystemPolicy, error) {
+func (s *adminService) UpdateSystemPolicy(ctx context.Context, updates map[string]any) (*config.SystemPolicy, error) {
 	// Kiểm tra tính hợp lệ của DefaultValidityDays so với MaxValidityDays (cần convert sang int)
 	if maxDaysVal, ok := updates["max_validity_days"]; ok {
 		if defaultDaysVal, ok := updates["default_validity_days"]; ok {

@@ -18,8 +18,9 @@ type AuthService interface {
 	Login(email, password string) (user *domain.User, accessToken string, expiresIn int, err error)
 	Logout(ctx *gin.Context) error
 }
+
 type AdminService interface {
 	GetSystemPolicy(ctx context.Context) (*config.SystemPolicy, error)
-	UpdateSystemPolicy(ctx context.Context, updates map[string]interface{}) (*config.SystemPolicy, error)
+	UpdateSystemPolicy(ctx context.Context, updates map[string]any) (*config.SystemPolicy, error)
 	CleanupExpiredFiles(ctx context.Context) (int, error)
 }
