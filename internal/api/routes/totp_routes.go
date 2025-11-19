@@ -17,6 +17,6 @@ func (r *TotpRoutes) Register(group *gin.RouterGroup) {
 	totp := group.Group("/auth/totp")
 	{
 		totp.POST("/setup", r.handler.SetupTOTP)
-		totp.POST("/verify", r.handler.SetupTOTP)
+		totp.POST("/verify", r.handler.VerifyTOTP)
 	}
 }
