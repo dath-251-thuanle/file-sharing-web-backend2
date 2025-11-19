@@ -27,7 +27,7 @@ func (uh *AuthHandler) CreateUser(ctx *gin.Context) {
 		return
 	}
 
-	createdUser, err := uh.auth_service.CreateUser(user.Username, user.Password, user.Email, user.Role)
+	createdUser, err, qrCode := uh.auth_service.CreateUser(user.Username, user.Password, user.Email, user.Role, user.EnableTOTP)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -37,8 +37,8 @@ func (uh *AuthHandler) CreateUser(ctx *gin.Context) {
 		"message": "User registered successfully",
 		"userId":  createdUser.Id,
 		"totpSetup": gin.H{
-			"secret": "secret",
-			"qrCode": "qrCode",
+			"secret": createdUser.SecretTOTP,
+			"qrCode": qrCode,
 		},
 	})
 }
@@ -85,4 +85,26 @@ func (ah *AuthHandler) Logout(ctx *gin.Context) {
 
 	utils.ResponseSuccess(ctx, http.StatusOK, "User logged out", nil)
 
+}
+
+func (ah *AuthHandler) LoginTOTP(ctx *gin.Context) {
+	var input domain.LoginInput
+	if err := ctx.ShouldBindJSON(&input); err != nil {
+		utils.ResponseValidator(ctx, validation.HandleValidationErrors(err))
+		return
+	}
+
+	user, accessToken, _, err := ah.auth_service.Login(input.Email, input.Password)
+	if err != nil {
+		utils.ResponseError(ctx, err)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{
+		"accessToken": accessToken,
+		"user": gin.H{
+			"id":       user.Id,
+			"username": user.Username,
+		},
+	})
 }

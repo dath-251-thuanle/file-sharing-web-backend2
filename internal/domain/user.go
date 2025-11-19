@@ -7,6 +7,7 @@ type User struct {
 	Email      string `json:"email" `
 	Role       string `json:"role"`
 	EnableTOTP bool   `json:"enableTOTP"`
+	SecretTOTP string `json:"secretTOTP"`
 }
 
 type UserCreate struct {
