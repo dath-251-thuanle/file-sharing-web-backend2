@@ -8,6 +8,7 @@ import (
 	"github.com/dath-251-thuanle/file-sharing-web-backend2/internal/api/routes"
 	"github.com/dath-251-thuanle/file-sharing-web-backend2/internal/infrastructure/database"
 	"github.com/dath-251-thuanle/file-sharing-web-backend2/internal/infrastructure/jwt"
+	"github.com/dath-251-thuanle/file-sharing-web-backend2/internal/infrastructure/storage"
 	"github.com/dath-251-thuanle/file-sharing-web-backend2/internal/repository"
 	"github.com/gin-gonic/gin"
 )
@@ -41,10 +42,19 @@ func NewApplication(cfg *config.Config) *Application {
 	tokenService := jwt.NewJWTService()
 	authRepo := repository.NewAuthRepository(database.DB)
 
+	fileRepo := repository.NewFileRepository(database.DB)
+	sharedRepo := repository.NewSharedRepository(database.DB)
+
+	userRepo := repository.NewSQLUserRepository(database.DB)
+
+	// Giả định thư mục upload
+	storageService := storage.NewLocalStorage("uploads")
+
 	modules := []Module{
 		NewUserModule(ctx),
 		NewAuthModule(ctx, tokenService),
 		NewAdminModule(cfg),
+		NewFileModule(cfg, fileRepo, sharedRepo, userRepo, storageService),
 	}
 
 	routes.RegisterRoutes(r, tokenService, authRepo, getModuleRoutes(modules)...)
