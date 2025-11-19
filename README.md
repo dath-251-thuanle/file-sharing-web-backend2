@@ -1,12 +1,16 @@
 # HỆ THỐNG CHIA SẺ FILE THÔNG QUA WEB (file-sharing-web-backend)
 ## Mục lục
-1. [Tổng quan dự án](#tổng-quan-dự-án)
-2. [Danh sách thành viên](#danh-sách-thành-viên)
-3. [Cấu trúc thư mục](#cấu-trúc-thư-mục)
-4. [Yêu cầu hệ thống](#yêu-cầu-hệ-thống)
-5. [Hướng dẫn cài đặt](#hướng-dẫn-cài-đặt)
-6. [Workflow](#workflow)
----
+[1. Tổng quan dự án](#tổng-quan-dự-án)
+
+[2. Danh sách thành viên](#danh-sách-thành-viên)
+
+[3. Cấu trúc thư mục](#cấu-trúc-thư-mục)
+
+[4. Yêu cầu hệ thống](#yêu-cầu-hệ-thống)
+
+[5. Hướng dẫn cài đặt](#hướng-dẫn-cài-đặt)
+
+[6. Workflow](#workflow)
 
 ## Tổng quan dự án
 Đây là repository chứa mã nguồn **Back-end** cho hệ thống chia sẻ file thông qua web, được xây dựng bằng Golang và sử dụng PostgreSQL.
@@ -39,6 +43,9 @@ Tính năng:
 ├── config/
 │   ├── app.yaml
 │   └── config.go
+├── docs/
+│   ├── API_docs.md
+│   └── README.md
 ├── internal/
 │   ├── api/
 │   │   ├── dto/
