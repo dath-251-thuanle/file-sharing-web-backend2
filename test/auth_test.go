@@ -20,32 +20,7 @@ func TestCreateUser(t *testing.T) {
 	auth := service.NewAuthService(userrepo, repository.NewAuthRepository(database.DB), jwt.NewJWTService())
 	serv := service.NewUserService(userrepo)
 
-	if _, err, _ := auth.CreateUser("kdm", "kdm12345", "kdm@gmail.com", "user", false); err != nil {
-		t.Errorf(`FAILED: %v`, err)
-		return
-	}
-
-	user, err := serv.GetUserByEmail("kdm@gmail.com")
-
-	if err != nil {
-		t.Errorf(`FAILED: %v`, err)
-		return
-	}
-
-	fmt.Println(user)
-}
-
-func TestCreateTOTPUser(t *testing.T) {
-	if err := database.InitDB(); err != nil {
-		t.Errorf("Failed: %v", err)
-		return
-	}
-
-	userrepo := repository.NewSQLUserRepository(database.DB)
-	auth := service.NewAuthService(userrepo, repository.NewAuthRepository(database.DB), jwt.NewJWTService())
-	serv := service.NewUserService(userrepo)
-
-	if _, err, _ := auth.CreateUser("kdm", "kdm12345", "kdm@gmail.com", "user", true); err != nil {
+	if _, err := auth.CreateUser("kdm", "kdm12345", "kdm@gmail.com", "user"); err != nil {
 		t.Errorf(`FAILED: %v`, err)
 		return
 	}

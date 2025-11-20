@@ -20,6 +20,7 @@ func NewAuthHandler(auth_service service.AuthService) *AuthHandler {
 	}
 }
 
+
 func (uh *AuthHandler) CreateUser(ctx *gin.Context) {
 	var user domain.UserCreate
 	if err := ctx.ShouldBindJSON(&user); err != nil {
@@ -27,7 +28,7 @@ func (uh *AuthHandler) CreateUser(ctx *gin.Context) {
 		return
 	}
 
-	createdUser, err, qrCode := uh.auth_service.CreateUser(user.Username, user.Password, user.Email, user.Role, user.EnableTOTP)
+	createdUser, err := uh.auth_service.CreateUser(user.Username, user.Password, user.Email, user.Role)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -37,8 +38,8 @@ func (uh *AuthHandler) CreateUser(ctx *gin.Context) {
 		"message": "User registered successfully",
 		"userId":  createdUser.Id,
 		"totpSetup": gin.H{
-			"secret": createdUser.SecretTOTP,
-			"qrCode": qrCode,
+			"secret": "secret",
+			"qrCode": "qrCode",
 		},
 	})
 }
