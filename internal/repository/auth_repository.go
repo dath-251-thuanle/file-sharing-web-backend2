@@ -17,9 +17,9 @@ func NewAuthRepository(db *sql.DB) AuthRepository {
 }
 
 func (ur *authRepository) Create(user *domain.User) (*domain.User, error) {
-	row := ur.db.QueryRow("INSERT INTO users (username, password, Email, Role, enableTOTP) VALUES ($1, $2, $3, $4, $5) RETURNING id", user.Username, user.Password, user.Email, user.Role, user.EnableTOTP)
+	row := ur.db.QueryRow("INSERT INTO users (userID, username, password, email, role, enableTOTP, secretTOTP) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id", user.Id, user.Username, user.Password, user.Email, user.Role, user.EnableTOTP, user.SecretTOTP)
 	err := row.Scan(&user.Id)
-
+	fmt.Println("Created user with ID:", user.Id)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create user: %w", err)
 	}

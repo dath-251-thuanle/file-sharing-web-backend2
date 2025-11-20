@@ -14,7 +14,7 @@ type UserService interface {
 }
 
 type AuthService interface {
-	CreateUser(username, password, email, role string) (*domain.User, error)
+	CreateUser(username, password, email string) (*domain.User, error)
 	Login(email, password string) (user *domain.User, accessToken string, expiresIn int, err error)
 	Logout(ctx *gin.Context) error
 }

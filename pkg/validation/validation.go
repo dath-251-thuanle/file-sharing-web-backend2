@@ -90,7 +90,7 @@ func HandleValidationErrors(err error) gin.H {
 	}
 
 	return gin.H{
-		"error":  "Yêu cầu không hợp lệ",
+		"error":  "Validation error",
 		"detail": err.Error(),
 	}
 }

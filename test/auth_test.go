@@ -20,7 +20,7 @@ func TestCreateUser(t *testing.T) {
 	auth := service.NewAuthService(userrepo, repository.NewAuthRepository(database.DB), jwt.NewJWTService())
 	serv := service.NewUserService(userrepo)
 
-	if _, err := auth.CreateUser("kdm", "kdm12345", "kdm@gmail.com", "user"); err != nil {
+	if _, err := auth.CreateUser("kdm", "kdm12345", "kdm@gmail.com"); err != nil {
 		t.Errorf(`FAILED: %v`, err)
 		return
 	}

@@ -20,15 +20,17 @@ func NewAuthHandler(auth_service service.AuthService) *AuthHandler {
 	}
 }
 
-
 func (uh *AuthHandler) CreateUser(ctx *gin.Context) {
 	var user domain.UserCreate
 	if err := ctx.ShouldBindJSON(&user); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"error":   "Validation error",
+			"message": "Required fields are missing",
+		})
 		return
 	}
 
-	createdUser, err := uh.auth_service.CreateUser(user.Username, user.Password, user.Email, user.Role)
+	createdUser, err := uh.auth_service.CreateUser(user.Username, user.Password, user.Email)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -37,10 +39,6 @@ func (uh *AuthHandler) CreateUser(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, gin.H{
 		"message": "User registered successfully",
 		"userId":  createdUser.Id,
-		"totpSetup": gin.H{
-			"secret": "secret",
-			"qrCode": "qrCode",
-		},
 	})
 }
 

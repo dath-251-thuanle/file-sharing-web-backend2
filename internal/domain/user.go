@@ -1,8 +1,8 @@
 package domain
 
 type User struct {
-	Id         string `json:"user_id"`
-	Username   string `json:"user_name" `
+	Id         string `json:"userid"`
+	Username   string `json:"username" `
 	Password   string `json:"password" `
 	Email      string `json:"email" `
 	Role       string `json:"role"`
@@ -11,9 +11,7 @@ type User struct {
 }
 
 type UserCreate struct {
-	Username   string `json:"user_name" binding:"required"`
+	Username   string `json:"username" binding:"required"`
 	Email      string `json:"email" binding:"required"`
 	Password   string `json:"password" binding:"required"`
-	EnableTOTP bool   `json:"enableTOTP"`
-	Role       string `json:"role" binding:"required"`
 }

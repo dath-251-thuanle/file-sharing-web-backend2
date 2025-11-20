@@ -10,6 +10,7 @@ import (
 	"github.com/dath-251-thuanle/file-sharing-web-backend2/internal/repository"
 	"github.com/dath-251-thuanle/file-sharing-web-backend2/pkg/utils"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -27,16 +28,25 @@ func NewAuthService(userRepo repository.UserRepository, authRepo repository.Auth
 	}
 }
 
-func (us *authService) CreateUser(username, password, email, role string) (*domain.User, error) {
+func (us *authService) CreateUser(username, password, email string) (*domain.User, error) {
+
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		return nil, utils.WrapError(err, "failed to hash password", utils.ErrCodeInternal)
 	}
+	hashedUserID, err := uuid.NewRandom()
+	if err != nil {
+		return nil, utils.WrapError(err, "failed to create UserID", utils.ErrCodeInternal)
+	}
+	//TODO: add username and email uniqueness check
 	user := &domain.User{
-		Username: username,
-		Password: string(hashedPassword),
-		Email:    email,
-		Role:     role,
+		Id:         hashedUserID.String(),
+		Username:   username,
+		Password:   string(hashedPassword),
+		Email:      email,
+		Role:       "user",
+		EnableTOTP: false,
+		SecretTOTP: "",
 	}
 	return us.authRepo.Create(user)
 }
