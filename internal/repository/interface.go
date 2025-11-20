@@ -14,5 +14,5 @@ type UserRepository interface {
 type AuthRepository interface {
 	BlacklistToken(token string, expiredAt time.Time) error
 	IsTokenBlacklisted(token string) (bool, error)
-	Create(user *domain.User, secret string) (*domain.User, error)
+	Create(user *domain.User) (*domain.User, error)
 }

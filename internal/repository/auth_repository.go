@@ -16,8 +16,8 @@ func NewAuthRepository(db *sql.DB) AuthRepository {
 	return &authRepository{db: db}
 }
 
-func (ur *authRepository) Create(user *domain.User, secret string) (*domain.User, error) {
-	row := ur.db.QueryRow("INSERT INTO users (username, password, Email, Role, enableTOTP, secretTOTP) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id", user.Username, user.Password, user.Email, user.Role, user.EnableTOTP, secret)
+func (ur *authRepository) Create(user *domain.User) (*domain.User, error) {
+	row := ur.db.QueryRow("INSERT INTO users (username, password, Email, Role, enableTOTP) VALUES ($1, $2, $3, $4, $5) RETURNING id", user.Username, user.Password, user.Email, user.Role, user.EnableTOTP)
 	err := row.Scan(&user.Id)
 
 	if err != nil {

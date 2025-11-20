@@ -10,7 +10,6 @@ import (
 	"github.com/dath-251-thuanle/file-sharing-web-backend2/internal/repository"
 	"github.com/dath-251-thuanle/file-sharing-web-backend2/pkg/utils"
 	"github.com/gin-gonic/gin"
-	"github.com/pquerna/otp/totp"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -28,36 +27,18 @@ func NewAuthService(userRepo repository.UserRepository, authRepo repository.Auth
 	}
 }
 
-func (us *authService) CreateUser(username, password, email, role string, enableTOTP bool) (*domain.User, error, string) {
+func (us *authService) CreateUser(username, password, email, role string) (*domain.User, error) {
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
-		return nil, utils.WrapError(err, "failed to hash password", utils.ErrCodeInternal), ""
+		return nil, utils.WrapError(err, "failed to hash password", utils.ErrCodeInternal)
 	}
 	user := &domain.User{
-		Username:   username,
-		Password:   string(hashedPassword),
-		Email:      email,
-		Role:       role,
-		EnableTOTP: enableTOTP,
+		Username: username,
+		Password: string(hashedPassword),
+		Email:    email,
+		Role:     role,
 	}
-
-	var secret, qrCode string
-
-	if enableTOTP {
-		key, err := totp.Generate(totp.GenerateOpts{
-			Issuer:      "FileSharingWeb",
-			AccountName: email,
-		})
-
-		if err != nil {
-			return nil, err, ""
-		}
-		secret = key.Secret()
-		qrCode = key.URL()
-	}
-	var savedUser *domain.User
-	savedUser, err = us.authRepo.Create(user, secret)
-	return savedUser, err, qrCode
+	return us.authRepo.Create(user)
 }
 
 func (as *authService) Login(email, password string) (*domain.User, string, int, error) {
