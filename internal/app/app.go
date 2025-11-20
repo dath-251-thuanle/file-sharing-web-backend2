@@ -42,18 +42,23 @@ func NewApplication(cfg *config.Config) *Application {
 	tokenService := jwt.NewJWTService()
 	authRepo := repository.NewAuthRepository(database.DB)
 
+	// Khởi tạo Repositories cần thiết
 	fileRepo := repository.NewFileRepository(database.DB)
 	sharedRepo := repository.NewSharedRepository(database.DB)
 
 	userRepo := repository.NewSQLUserRepository(database.DB)
 
-	// Giả định thư mục upload
+	// Khởi tạo Storage Service
+	// Cần đảm bảo đường dẫn này đúng với CWD: "cmd/server/uploads"
 	storageService := storage.NewLocalStorage("uploads")
 
 	modules := []Module{
 		NewUserModule(ctx),
 		NewAuthModule(ctx, tokenService),
-		NewAdminModule(cfg),
+
+		// CẬP NHẬT: Thêm fileRepo và storageService cho Admin Module
+		NewAdminModule(cfg, fileRepo, storageService),
+
 		NewFileModule(cfg, fileRepo, sharedRepo, userRepo, storageService),
 	}
 

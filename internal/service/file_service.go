@@ -7,6 +7,7 @@ import (
 	"mime/multipart"
 	"slices"
 
+	"path/filepath"
 	"time"
 
 	"github.com/dath-251-thuanle/file-sharing-web-backend2/config"
@@ -116,12 +117,13 @@ func (s *fileService) UploadFile(ctx context.Context, fileHeader *multipart.File
 		hashStr := string(hashed)
 		passwordHash = &hashStr
 	}
-
+	fileExtension := filepath.Ext(fileHeader.Filename)
+	storageFileName := fileUUID + fileExtension
 	newFile := &domain.File{
 		Id:            fileUUID,
 		OwnerId:       ownerID,
 		FileName:      fileHeader.Filename,
-		StorageName:   fileUUID, // Tên file trên ổ đĩa sẽ là UUID
+		StorageName:   storageFileName, // Tên file trên ổ đĩa sẽ là UUID
 		FileSize:      fileHeader.Size,
 		MimeType:      fileHeader.Header.Get("Content-Type"),
 		ShareToken:    shareToken,
@@ -199,6 +201,7 @@ func (s *fileService) DeleteFile(ctx context.Context, fileID string, userID stri
 	}
 
 	// Xóa vật lý trước
+	file.StorageName = fileID + filepath.Ext(file.FileName) // Đảm bảo đúng tên file vật lý
 	if err := s.storage.DeleteFile(file.StorageName); err != nil {
 		return utils.WrapError(err, "Failed to delete file from storage", utils.ErrCodeInternal)
 	}

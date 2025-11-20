@@ -16,6 +16,7 @@ type FileRepository interface {
 	GetFileByToken(ctx context.Context, token string) (*domain.File, error)
 	DeleteFile(ctx context.Context, id string, userID string) error
 	GetMyFiles(ctx context.Context, userID string, params domain.ListFileParams) ([]domain.File, error)
+	FindAll(ctx context.Context) ([]domain.File, error)
 }
 
 type fileRepository struct {
@@ -53,11 +54,6 @@ func (r *fileRepository) CreateFile(ctx context.Context, file *domain.File) (*do
 		) RETURNING id, created_at
 	`
 
-	// LƯU Ý: Chúng ta phải giả định cột 'storage_name' không bắt buộc
-	// vì nó không có trong lược đồ bạn cung cấp, nhưng cần cho việc xóa file vật lý.
-	// Tạm thời, tôi bỏ qua nó trong INSERT.
-
-	// Sử dụng file.Id và file.CreatedAt đã được Service thiết lập
 	err := r.db.QueryRowContext(ctx, query,
 		file.Id,
 		userID,             // $2: user_id (UUID hoặc NULL)
@@ -84,14 +80,13 @@ func (r *fileRepository) GetFileByID(ctx context.Context, id string) (*domain.Fi
 	query := `
 		SELECT 
 			id, user_id, name, type, size, share_token, 
-			password, available_from, available_to, enable_totp, created_at
+			password, available_from, available_to, enable_totp, created_at, is_public
 		FROM files
 		WHERE id = $1
 	`
 
 	var file domain.File
 
-	// Khai báo các biến sql.NullXxx cho các cột có thể NULL
 	var ownerID sql.NullString
 	var passwordHash sql.NullString
 
@@ -99,12 +94,12 @@ func (r *fileRepository) GetFileByID(ctx context.Context, id string) (*domain.Fi
 
 	err := row.Scan(
 		&file.Id,
-		&ownerID,       // user_id (NULLable)
-		&file.FileName, // name
-		&file.MimeType, // type
-		&file.FileSize, // size
+		&ownerID,
+		&file.FileName,
+		&file.MimeType,
+		&file.FileSize,
 		&file.ShareToken,
-		&passwordHash, // password (NULLable)
+		&passwordHash,
 		&file.AvailableFrom,
 		&file.AvailableTo,
 		&file.EnableTOTP,
@@ -114,12 +109,11 @@ func (r *fileRepository) GetFileByID(ctx context.Context, id string) (*domain.Fi
 
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, err // Trả về sql.ErrNoRows nếu không tìm thấy
+			return nil, err
 		}
 		return nil, fmt.Errorf("failed to get file by ID: %w", err)
 	}
 
-	// Xử lý giá trị NULL sau khi Scan
 	if ownerID.Valid {
 		file.OwnerId = &ownerID.String
 	} else {
@@ -138,10 +132,6 @@ func (r *fileRepository) GetFileByID(ctx context.Context, id string) (*domain.Fi
 }
 
 func (r *fileRepository) GetFileByToken(ctx context.Context, token string) (*domain.File, error) {
-	// SELECT * FROM files WHERE share_token = $1
-
-	// return nil, sql.ErrNoRows // Mô phỏng
-
 	query := `
 		SELECT 
 			id, user_id, name, type, size, share_token, 
@@ -152,8 +142,6 @@ func (r *fileRepository) GetFileByToken(ctx context.Context, token string) (*dom
 	`
 
 	var file domain.File
-
-	// Khai báo các biến sql.NullXxx cho các cột có thể NULL
 	var ownerID sql.NullString
 	var passwordHash sql.NullString
 
@@ -161,12 +149,12 @@ func (r *fileRepository) GetFileByToken(ctx context.Context, token string) (*dom
 
 	err := row.Scan(
 		&file.Id,
-		&ownerID,       // user_id (NULLable)
-		&file.FileName, // name
-		&file.MimeType, // type
-		&file.FileSize, // size
+		&ownerID,
+		&file.FileName,
+		&file.MimeType,
+		&file.FileSize,
 		&file.ShareToken,
-		&passwordHash, // password (NULLable)
+		&passwordHash,
 		&file.AvailableFrom,
 		&file.AvailableTo,
 		&file.EnableTOTP,
@@ -176,12 +164,11 @@ func (r *fileRepository) GetFileByToken(ctx context.Context, token string) (*dom
 
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, err // Trả về sql.ErrNoRows nếu không tìm thấy
+			return nil, err
 		}
 		return nil, err
 	}
 
-	// Xử lý giá trị NULL sau khi Scan
 	if ownerID.Valid {
 		file.OwnerId = &ownerID.String
 	} else {
@@ -200,27 +187,23 @@ func (r *fileRepository) GetFileByToken(ctx context.Context, token string) (*dom
 }
 
 func (r *fileRepository) DeleteFile(ctx context.Context, id string, userID string) error {
-	// 1. Lệnh SQL DELETE file dựa trên ID và USER_ID
+	// Giữ nguyên, vì nó chỉ DELETE metadata trong DB, việc xóa vật lý nằm ở Service
 	query := `
         DELETE FROM files 
         WHERE id = $1 AND user_id = $2
     `
 
-	// 2. Thực thi lệnh DELETE
 	result, err := r.db.ExecContext(ctx, query, id, userID)
 	if err != nil {
 		return fmt.Errorf("failed to execute delete query for file ID %s: %w", id, err)
 	}
 
-	// 3. Kiểm tra số hàng bị xóa
 	rowsAffected, err := result.RowsAffected()
 	if err != nil {
 		return fmt.Errorf("failed to check rows affected: %w", err)
 	}
 
-	// Nếu không có hàng nào bị ảnh hưởng (file không tồn tại hoặc userID không khớp)
 	if rowsAffected == 0 {
-		// Trả về lỗi, Service sẽ quyết định đây là 404 Not Found hay 403 Forbidden
 		return sql.ErrNoRows
 	}
 
@@ -228,8 +211,6 @@ func (r *fileRepository) DeleteFile(ctx context.Context, id string, userID strin
 }
 
 func (r *fileRepository) GetMyFiles(ctx context.Context, userID string, params domain.ListFileParams) ([]domain.File, error) {
-	// LƯU Ý: Đây là logic truy vấn cơ bản, có thể cần thư viện sqlx để đơn giản hóa việc ánh xạ struct.
-
 	// 1. Khởi tạo truy vấn cơ bản
 	baseQuery := `
 		SELECT 
@@ -242,18 +223,12 @@ func (r *fileRepository) GetMyFiles(ctx context.Context, userID string, params d
 	query := baseQuery
 	argCounter := 2
 
-	// 2. Thêm điều kiện lọc Status
+	// 2. Thêm điều kiện lọc Status (giữ nguyên, vì không có cột status trong DB)
 	if strings.ToLower(params.Status) != "all" {
-		// Logic phức tạp hơn cần tính toán trạng thái (active, pending, expired) dựa trên thời gian.
-		// Tạm thời bỏ qua Status Filter cho đến khi có trường Status trong DB hoặc có logic tính toán.
-		// Nếu bạn có cột 'status' trong DB:
-		// query += fmt.Sprintf(" AND status = $%d", argCounter)
-		// args = append(args, params.Status)
-		// argCounter++
+		// ...
 	}
 
 	// 3. Thêm sắp xếp
-	// Chỉ cho phép sắp xếp theo cột hợp lệ để tránh SQL Injection
 	safeSortBy := "created_at"
 	if params.SortBy == "fileName" {
 		safeSortBy = "name"
@@ -280,20 +255,87 @@ func (r *fileRepository) GetMyFiles(ctx context.Context, userID string, params d
 	var files []domain.File
 	for rows.Next() {
 		var f domain.File
-		// LƯU Ý: Phải sử dụng sql.NullTime cho các trường TIMESTAMPTZ NULLABLE
-		// Phải sử dụng sql.NullString cho các trường TEXT/VARCHAR NULLABLE như password_hash, updated_at
+		var ownerID sql.NullString // Cần để scan user_id
 
-		// Giả định các trường trong File struct đã được ánh xạ đúng
 		err := rows.Scan(
-			&f.Id, &f.OwnerId, &f.FileName, &f.MimeType, &f.FileSize, &f.ShareToken,
+			&f.Id, &ownerID, &f.FileName, &f.MimeType, &f.FileSize, &f.ShareToken,
 			&f.AvailableFrom, &f.AvailableTo, &f.EnableTOTP, &f.CreatedAt,
 			&f.IsPublic,
-			// ... Nếu có thêm cột cần scan
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan file row: %w", err)
 		}
+
+		// Gán giá trị sau khi scan
+		if ownerID.Valid {
+			f.OwnerId = &ownerID.String
+		}
+
 		files = append(files, f)
+	}
+
+	return files, nil
+}
+func (r *fileRepository) FindAll(ctx context.Context) ([]domain.File, error) {
+	query := `
+        SELECT 
+            id, user_id, name, type, size, share_token, 
+            password, available_from, available_to, enable_totp, created_at, is_public
+        FROM files
+        ORDER BY created_at DESC
+    `
+
+	rows, err := r.db.QueryContext(ctx, query)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query all files: %w", err)
+	}
+	defer rows.Close()
+
+	var files []domain.File
+	for rows.Next() {
+		var f domain.File
+		var ownerID sql.NullString
+		var passwordHash sql.NullString
+
+		err := rows.Scan(
+			&f.Id,
+			&ownerID,
+			&f.FileName,
+			&f.MimeType,
+			&f.FileSize,
+			&f.ShareToken,
+			&passwordHash, // Cần password để xác định HasPassword
+			&f.AvailableFrom,
+			&f.AvailableTo,
+			&f.EnableTOTP,
+			&f.CreatedAt,
+			&f.IsPublic,
+		)
+
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan file row in FindAll: %w", err)
+		}
+
+		// Gán giá trị sau khi scan
+		if ownerID.Valid {
+			f.OwnerId = &ownerID.String
+		} else {
+			f.OwnerId = nil
+		}
+
+		if passwordHash.Valid {
+			f.HasPassword = true
+			f.PasswordHash = &passwordHash.String
+		} else {
+			f.HasPassword = false
+			f.PasswordHash = nil
+		}
+
+		files = append(files, f)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error during iteration in FindAll: %w", err)
 	}
 
 	return files, nil
