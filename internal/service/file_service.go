@@ -259,14 +259,6 @@ func (s *fileService) DownloadFile(ctx context.Context, token string, userID str
 			return nil, nil, fmt.Errorf("password needed to view file")
 		}
 
-		// hashed, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-		// if err != nil {
-		// 	return nil, utils.WrapError(err, "Failed to hash password", utils.ErrCodeInternal)
-		// }
-		// hashStr := string(hashed)
-		// userPasswordHash := &hashStr
-		// log.Println(password, *userPasswordHash, *fileInfo.PasswordHash)
-
 		if bcrypt.CompareHashAndPassword([]byte(*fileInfo.PasswordHash), []byte(password)) != nil {
 			return nil, nil, fmt.Errorf("invalid password for file")
 		}
