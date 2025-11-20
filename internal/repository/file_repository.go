@@ -47,9 +47,9 @@ func (r *fileRepository) CreateFile(ctx context.Context, file *domain.File) (*do
 		INSERT INTO files (
 			id, user_id, name, type, size, password, 
 			available_from, available_to, enable_totp, 
-			share_token, created_at
+			share_token, created_at, is_public
 		) VALUES (
-			$1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11
+			$1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12
 		) RETURNING id, created_at
 	`
 
@@ -69,7 +69,8 @@ func (r *fileRepository) CreateFile(ctx context.Context, file *domain.File) (*do
 		file.AvailableTo,   // $8: available_to
 		file.EnableTOTP,    // $9: enable_totp
 		file.ShareToken,    // $10: share_token
-		file.CreatedAt,     // $11: created_at
+		file.CreatedAt,     // $11: created_at,
+		file.IsPublic,      // $12: is_public,
 	).Scan(&file.Id, &file.CreatedAt)
 
 	if err != nil {
@@ -108,6 +109,7 @@ func (r *fileRepository) GetFileByID(ctx context.Context, id string) (*domain.Fi
 		&file.AvailableTo,
 		&file.EnableTOTP,
 		&file.CreatedAt,
+		&file.IsPublic,
 	)
 
 	if err != nil {
@@ -143,7 +145,8 @@ func (r *fileRepository) GetFileByToken(ctx context.Context, token string) (*dom
 	query := `
 		SELECT 
 			id, user_id, name, type, size, share_token, 
-			password, available_from, available_to, enable_totp, created_at
+			password, available_from, available_to, enable_totp, 
+			created_at, is_public
 		FROM files
 		WHERE share_token = $1
 	`
@@ -168,6 +171,7 @@ func (r *fileRepository) GetFileByToken(ctx context.Context, token string) (*dom
 		&file.AvailableTo,
 		&file.EnableTOTP,
 		&file.CreatedAt,
+		&file.IsPublic,
 	)
 
 	if err != nil {
@@ -230,7 +234,7 @@ func (r *fileRepository) GetMyFiles(ctx context.Context, userID string, params d
 	baseQuery := `
 		SELECT 
 			id, user_id, name, type, size, share_token, 
-			available_from, available_to, enable_totp, created_at
+			available_from, available_to, enable_totp, created_at, is_public
 		FROM files
 		WHERE user_id = $1 
 	`
@@ -283,6 +287,7 @@ func (r *fileRepository) GetMyFiles(ctx context.Context, userID string, params d
 		err := rows.Scan(
 			&f.Id, &f.OwnerId, &f.FileName, &f.MimeType, &f.FileSize, &f.ShareToken,
 			&f.AvailableFrom, &f.AvailableTo, &f.EnableTOTP, &f.CreatedAt,
+			&f.IsPublic,
 			// ... Nếu có thêm cột cần scan
 		)
 		if err != nil {
