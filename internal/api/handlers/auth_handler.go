@@ -8,6 +8,7 @@ import (
 	"github.com/dath-251-thuanle/file-sharing-web-backend2/pkg/utils"
 	"github.com/dath-251-thuanle/file-sharing-web-backend2/pkg/validation"
 	"github.com/gin-gonic/gin"
+	"github.com/dath-251-thuanle/file-sharing-web-backend2/internal/infrastructure/jwt"
 )
 
 type AuthHandler struct {
@@ -85,4 +86,71 @@ func (ah *AuthHandler) Logout(ctx *gin.Context) {
 
 	utils.ResponseSuccess(ctx, http.StatusOK, "User logged out", nil)
 
+}
+
+func getUserIDFromContext(c *gin.Context) (string, bool) {
+	userObj, exists := c.Get("user")
+	if !exists {
+		return "", false
+	}
+	
+	claims, ok := userObj.(*jwt.Claims)
+	if !ok {
+		return "", false
+	}
+	
+	return claims.UserID, true
+}
+
+func (h *AuthHandler) SetupTOTP(c *gin.Context) {
+	userID, ok := getUserIDFromContext(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized or invalid token"})
+		return
+	}
+
+	resp, err := h.auth_service.SetupTOTP(userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message":   "TOTP secret generated",
+		"totpSetup": resp,
+	})
+}
+
+type VerifyTOTPRequest struct {
+	Code string `json:"code" binding:"required"`
+}
+
+func (h *AuthHandler) VerifyTOTP(c *gin.Context) {
+	userID, ok := getUserIDFromContext(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized or invalid token"})
+		return
+	}
+
+	var req VerifyTOTPRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
+		return
+	}
+
+	okVerify, err := h.auth_service.VerifyTOTP(userID, req.Code)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	if !okVerify {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid TOTP code"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message":     "TOTP verified and enabled successfully",
+		"totpEnabled": true,
+	})
 }

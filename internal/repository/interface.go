@@ -15,4 +15,7 @@ type AuthRepository interface {
 	BlacklistToken(token string, expiredAt time.Time) error
 	IsTokenBlacklisted(token string) (bool, error)
 	Create(user *domain.User) (*domain.User, error)
+	SaveSecret(userID string, secret string) error
+	GetSecret(userID string) (string, error)
+	EnableTOTP(userID string) error
 }

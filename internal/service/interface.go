@@ -8,6 +8,11 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+type TOTPSetupResponse struct {
+	Secret string `json:"secret"`
+	QRCode string `json:"qrCode"`
+}
+
 type UserService interface {
 	GetUserById(id string) (*domain.User, error)
 	GetUserByEmail(email string) (*domain.User, error)
@@ -16,6 +21,8 @@ type UserService interface {
 type AuthService interface {
 	CreateUser(username, password, email, role string) (*domain.User, error)
 	Login(email, password string) (user *domain.User, accessToken string, expiresIn int, err error)
+	SetupTOTP(userID string) (*TOTPSetupResponse, error)
+	VerifyTOTP(userID string, code string) (bool, error)
 	Logout(ctx *gin.Context) error
 }
 

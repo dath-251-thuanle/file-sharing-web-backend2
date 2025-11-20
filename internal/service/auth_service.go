@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"encoding/base64"
 
 	"github.com/dath-251-thuanle/file-sharing-web-backend2/internal/domain"
 	"github.com/dath-251-thuanle/file-sharing-web-backend2/internal/infrastructure/jwt"
@@ -11,6 +12,8 @@ import (
 	"github.com/dath-251-thuanle/file-sharing-web-backend2/pkg/utils"
 	"github.com/gin-gonic/gin"
 	"golang.org/x/crypto/bcrypt"
+	"github.com/pquerna/otp/totp"
+	"github.com/skip2/go-qrcode"
 )
 
 type authService struct {
@@ -22,8 +25,8 @@ type authService struct {
 func NewAuthService(userRepo repository.UserRepository, authRepo repository.AuthRepository, tokenService jwt.TokenService) AuthService {
 	return &authService{
 		userRepo:     userRepo,
-		tokenService: tokenService,
 		authRepo:     authRepo,
+		tokenService: tokenService,
 	}
 }
 
@@ -82,4 +85,50 @@ func (as *authService) Logout(ctx *gin.Context) error {
 		accessToken,
 		claims.ExpiresAt.Time,
 	)
+}
+
+func (as *authService) SetupTOTP(userID string) (*TOTPSetupResponse, error) {
+	const appName = "FileSharingApp"
+	key, err := totp.Generate(totp.GenerateOpts{
+		Issuer:      appName,
+		AccountName: fmt.Sprintf("user-%s", userID),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	secret := key.Secret()
+	otpURL := key.URL()
+
+	if err := as.authRepo.SaveSecret(userID, secret); err != nil {
+		return nil, err
+	}
+
+	png, err := qrcode.Encode(otpURL, qrcode.Medium, 256)
+	if err != nil {
+		return nil, err
+	}
+	qrBase64 := "data:image/png;base64," + base64.StdEncoding.EncodeToString(png)
+
+	return &TOTPSetupResponse{
+		Secret: secret,
+		QRCode: qrBase64,
+	}, nil
+}
+
+func (as *authService) VerifyTOTP(userID string, code string) (bool, error) {
+	secret, err := as.authRepo.GetSecret(userID)
+	if err != nil {
+		return false, err
+	}
+
+	valid := totp.Validate(code, secret)
+
+	if valid {
+		if err := as.authRepo.EnableTOTP(userID); err != nil {
+			return true, fmt.Errorf("verified but failed to enable status: %v", err)
+		}
+	}
+
+	return valid, nil
 }

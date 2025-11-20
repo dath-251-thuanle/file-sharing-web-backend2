@@ -44,3 +44,26 @@ func (r *authRepository) IsTokenBlacklisted(token string) (bool, error) {
 
 	return exists, err
 }
+
+func (r *authRepository) SaveSecret(userID string, secret string) error {
+	_, err := r.db.Exec(`
+		INSERT INTO user_totp(user_id, secret)
+		VALUES ($1, $2)
+		ON CONFLICT (user_id) DO UPDATE SET secret = EXCLUDED.secret
+	`, userID, secret)
+	return err
+}
+
+func (r *authRepository) GetSecret(userID string) (string, error) {
+	var secret string
+	err := r.db.QueryRow(`SELECT secret FROM user_totp WHERE user_id = $1`, userID).Scan(&secret)
+	if err != nil {
+		return "", err
+	}
+	return secret, nil
+}
+
+func (r *authRepository) EnableTOTP(userID string) error {
+	_, err := r.db.Exec(`UPDATE users SET "enableTOTP" = TRUE WHERE id = $1`, userID)
+	return err
+}
