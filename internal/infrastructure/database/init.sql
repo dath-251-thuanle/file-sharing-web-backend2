@@ -6,7 +6,8 @@ CREATE TABLE IF NOT EXISTS users (
     password VARCHAR(255) NOT NULL,
     email VARCHAR(255) UNIQUE NOT NULL,
     role VARCHAR(50) NOT NULL,
-    enableTOTP BOOLEAN DEFAULT FALSE
+    enableTOTP BOOLEAN DEFAULT FALSE,
+    secretTOTP VARCHAR(255)
 );
 
 CREATE TABLE IF NOT EXISTS files (
@@ -54,3 +55,7 @@ CREATE TABLE IF NOT EXISTS user_totp (
     secret TEXT NOT NULL,
     CONSTRAINT user_totp_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
+CREATE TABLE IF NOT EXISTS usersLoginSession (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    cid UUID NOT NULL
+)

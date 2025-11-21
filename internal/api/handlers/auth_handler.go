@@ -24,11 +24,14 @@ func NewAuthHandler(auth_service service.AuthService) *AuthHandler {
 func (uh *AuthHandler) CreateUser(ctx *gin.Context) {
 	var user domain.UserCreate
 	if err := ctx.ShouldBindJSON(&user); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"error":   "Validation error",
+			"message": "Required fields are missing",
+		})
 		return
 	}
 
-	createdUser, err := uh.auth_service.CreateUser(user.Username, user.Password, user.Email, user.Role)
+	createdUser, err := uh.auth_service.CreateUser(user.Username, user.Password, user.Email)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -37,10 +40,6 @@ func (uh *AuthHandler) CreateUser(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, gin.H{
 		"message": "User registered successfully",
 		"userId":  createdUser.Id,
-		"totpSetup": gin.H{
-			"secret": "secret",
-			"qrCode": "qrCode",
-		},
 	})
 }
 
@@ -51,7 +50,7 @@ func (ah *AuthHandler) Login(ctx *gin.Context) {
 		return
 	}
 
-	user, accessToken, expiresIn, err := ah.auth_service.Login(input.Email, input.Password)
+	user, token, err := ah.auth_service.Login(input.Email, input.Password)
 	if err != nil {
 		utils.ResponseError(ctx, err)
 		return
@@ -59,15 +58,16 @@ func (ah *AuthHandler) Login(ctx *gin.Context) {
 
 	if user.EnableTOTP {
 		ctx.JSON(http.StatusOK, gin.H{
-			"requireTOTP": true,
+			"requireTOTP": user.EnableTOTP,
+			"id":          user.Id,
+			"cid":         token,
 			"message":     "TOTP verification required",
 		})
 		return
 	}
 
 	ctx.JSON(http.StatusOK, gin.H{
-		"accessToken": accessToken,
-		"expiresIn":   expiresIn,
+		"accessToken": token,
 		"user": gin.H{
 			"id":       user.Id,
 			"username": user.Username,
@@ -197,5 +197,30 @@ func (h *AuthHandler) VerifyTOTP(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"message":     "TOTP verified successfully",
 		"totpEnabled": true,
+	})
+}
+
+func (ah *AuthHandler) LoginTOTP(ctx *gin.Context) {
+	var input domain.LoginInput
+	if err := ctx.ShouldBindJSON(&input); err != nil {
+		utils.ResponseValidator(ctx, validation.HandleValidationErrors(err))
+		return
+	}
+
+	user, accessToken, err := ah.auth_service.Login(input.Email, input.Password)
+	if err != nil {
+		utils.ResponseError(ctx, err)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{
+		"accessToken": accessToken,
+		"user": gin.H{
+			"id":          user.Id,
+			"username":    user.Username,
+			"email":       user.Email,
+			"role":        "user",
+			"totpEnabled": true,
+		},
 	})
 }

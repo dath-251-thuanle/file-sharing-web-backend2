@@ -29,7 +29,17 @@ func (ur *SQLUserRepository) FindById(id string, user *domain.User) error {
 
 func (ur *SQLUserRepository) FindByEmail(email string, user *domain.User) error {
 	row := ur.db.QueryRow("SELECT * FROM users WHERE email = $1", email)
-	err := row.Scan(&user.Id, &user.Username, &user.Password, &user.Email, &user.Role, &user.EnableTOTP)
+	err := row.Scan(&user.Id, &user.Username, &user.Password, &user.Email, &user.Role, &user.EnableTOTP, &user.SecretTOTP)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (ur *SQLUserRepository) AddTimestamp (id string, cid string) error {
+	row := ur.db.QueryRow("INSERT INTO usersLoginSession (id, cid) VALUES ($1, $2) RETURNING id", id, cid)
+	err := row.Scan(&id)
 	if err != nil {
 		return err
 	}

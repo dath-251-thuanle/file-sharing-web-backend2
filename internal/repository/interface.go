@@ -9,6 +9,7 @@ import (
 type UserRepository interface {
 	FindById(id string, user *domain.User) error
 	FindByEmail(email string, user *domain.User) error
+	AddTimestamp(id string, cid string) error
 }
 
 type AuthRepository interface {
