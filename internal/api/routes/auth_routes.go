@@ -22,8 +22,6 @@ func (ur *AuthRoutes) Register(r *gin.RouterGroup) {
 		auth.POST("/register", ur.handler.CreateUser)
 		auth.POST("/login", ur.handler.Login)
 		auth.POST("/login/totp", ur.handler.LoginTOTP)
-		// auth.POST("/password/forgot", ur.handler.ForgotPassword)
-		// auth.POST("/password/reset", ur.handler.ResetPassword)
 	}
 	protected := auth.Group("/")
 	protected.Use(middleware.AuthMiddleware())

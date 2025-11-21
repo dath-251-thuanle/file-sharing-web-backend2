@@ -119,7 +119,7 @@ Tính năng:
 
 Setup docker:
 ```
-docker run --name postgres-db -e POSTGRES_PASSWORD=postgres -p 5435:5432 -d postgres
+docker run --name postgres-db -e POSTGRES_PASSWORD=postgres -p 5432:5432 -d postgres
 ```
 
 Tạo user và database:

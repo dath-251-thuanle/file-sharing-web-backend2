@@ -11,13 +11,6 @@ CREATE TABLE IF NOT EXISTS users (
 );
 
 
-CREATE TABLE IF NOT EXISTS jwt_blacklist (
-    id SERIAL PRIMARY KEY,
-    token TEXT NOT NULL,
-    expired_at TIMESTAMP NOT NULL
-);
-
-
 CREATE TABLE IF NOT EXISTS files (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id UUID NOT NULL,

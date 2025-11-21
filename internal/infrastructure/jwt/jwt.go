@@ -22,7 +22,7 @@ type Claims struct {
 var jwtSecretKey = []byte(utils.GetEnv("JWT_SECRET_KEY", "github.com/dath-251-thuanle/file-sharing-web-backend2/internal/infrastructure/jwt"))
 
 const (
-	AccessTokenTTL = time.Minute * 15
+	AccessTokenTTL = time.Minute * 30
 )
 
 func NewJWTService() TokenService {
