@@ -90,8 +90,13 @@ func (as *authService) Login(email, password string) (*domain.User, string, erro
 
 }
 
-func (as *authService) LoginTOTP(email, totpCode string) (*domain.User, string, error) {
+func (as *authService) LoginTOTP(id, totpCode string) (*domain.User, string, error) {
 	user := &domain.User{}
+		err := as.userRepo.FindById(id, user)
+	if err != nil {
+		fmt.Println("Login failed: User not found")
+		return nil, "", utils.NewError("Invalid ID", utils.ErrCodeUnauthorized)
+	}
 	secret := user.SecretTOTP
 	if !totp.Validate(totpCode, secret) {
 		return nil, "", utils.NewError("Invalid or expired TOTP code", utils.ErrCodeUnauthorized)

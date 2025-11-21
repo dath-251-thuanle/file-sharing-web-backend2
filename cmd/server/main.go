@@ -9,7 +9,7 @@ import (
 func main() {
 	// Application entry point
 
-	if err := godotenv.Load("cmd/server/.env"); err != nil {
+	if err := godotenv.Load(); err != nil {
 		panic("Error loading .env file")
 	}
 

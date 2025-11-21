@@ -21,8 +21,6 @@ Tạo tài khoản mới (không bắt buộc để upload).
     "username": "nam123",
     "email": "<nam@example.com>",
     "password": "123456",
-    "enableTOTP": true,
-    "role": "user"
 }
 ```
 | Field        | Type    | Required | Description                             |
@@ -30,21 +28,14 @@ Tạo tài khoản mới (không bắt buộc để upload).
 | `username`   | string  | yes      | Tên người dùng (unique)                 |
 | `email`      | string  | yes      | Email (unique)                          |
 | `password`   | string  | yes      | Mật khẩu (tối thiểu 6 ký tự)            |
-| `enableTOTP` | boolean | no       | Bật xác thực 2FA                        |
-| `role`       | enum    | yes      | Phân quyền của người dùng trên hệ thống |
 
 **Response (200 OK)**
 ```json
 {
     "message": "User registered successfully",
     "userId": "550e8400-e29b-41d4-a716-446655440000",
-    "totpSetup": {
-        "secret": "JBSWY3DPEHPK3PXP",
-        "qrCode": "data:image/png;base64,iVBORw0KGgo..."
-    }
 }
 ```
-**Lưu ý:** Quét mã QR bằng Google Authenticator để kích hoạt 2FA.
 
 ## `POST /api/auth/login`
 
@@ -71,8 +62,10 @@ Tạo tài khoản mới (không bắt buộc để upload).
 **Response (200 OK - có TOTP)**
 ```json
 {
-    "requireTOTP": true,
-    "message": "TOTP verification required"
+    "cid": "431ba686-c69d....",
+    "id": "a3c34041-7e57e5...",
+    "message": "TOTP verification required",
+    "requireTOTP": true
 }
 ```
 ## `POST /api/auth/login/totp`
@@ -82,7 +75,7 @@ Xác thực mã TOTP (6 chữ số).
 **Request Body**
 ```json
 {
-    "email": "<nam@example.com>",
+    "id": "a3c34041-7e57e5...",
     "code": "123456"
 }
 ```
@@ -92,7 +85,8 @@ Xác thực mã TOTP (6 chữ số).
     "accessToken": "eyJhbGciOi...",
     "user": {
         "id": "550e8400-e29b-41d4-a716-446655440000",
-        "username": "nam123"
+        "username": "nam123",
+        "email": "<nam@example.com>"
     }
 }
 ```
@@ -113,13 +107,16 @@ Bật hoặc reset TOTP.
     }
 }
 ```
+
+**Lưu ý:** Quét mã QR bằng Google Authenticator để kích hoạt 2FA.
+
 ## `POST /api/auth/totp/verify`
 
 Xác minh mã TOTP.
 
 **Headers**
 
-- Authorization: Bearer Bearer `<token>`
+- Authorization: Bearer `<token>`
 
 **Request Body**
 ```json

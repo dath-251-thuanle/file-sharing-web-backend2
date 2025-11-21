@@ -5,6 +5,11 @@ type LoginInput struct {
 	Password string `json:"password" binding:"required"`
 }
 
+type LoginTOTPInput struct {
+	ID       string `json:"id" binding:"required"`
+	TOTPCode string `json:"code" binding:"required"`
+}
+
 type LoginResponse struct {
 	AccessToken string    `json:"accessToken,omitempty"`
 	ExpiresIn   int       `json:"expiresIn,omitempty"`

@@ -4,11 +4,11 @@ import (
 	"net/http"
 
 	"github.com/dath-251-thuanle/file-sharing-web-backend2/internal/domain"
+	"github.com/dath-251-thuanle/file-sharing-web-backend2/internal/infrastructure/jwt"
 	"github.com/dath-251-thuanle/file-sharing-web-backend2/internal/service"
 	"github.com/dath-251-thuanle/file-sharing-web-backend2/pkg/utils"
 	"github.com/dath-251-thuanle/file-sharing-web-backend2/pkg/validation"
 	"github.com/gin-gonic/gin"
-	"github.com/dath-251-thuanle/file-sharing-web-backend2/internal/infrastructure/jwt"
 )
 
 type AuthHandler struct {
@@ -93,48 +93,48 @@ func getUserIDFromContext(c *gin.Context) (string, bool) {
 	if !exists {
 		return "", false
 	}
-	
+
 	claims, ok := userObj.(*jwt.Claims)
 	if !ok {
 		return "", false
 	}
-	
+
 	return claims.UserID, true
 }
 
 func (h *AuthHandler) SetupTOTP(c *gin.Context) {
 	if authErr, exists := c.Get("authError"); exists {
-        switch authErr {
-			case "required":
-				c.JSON(http.StatusUnauthorized, gin.H{
-					"error":   "Unauthorized",
-					"message": "Bearer token is required",
-				})
-			case "invalid":
-				c.JSON(http.StatusUnauthorized, gin.H{
-					"error":   "Unauthorized",
-					"message": "Invalid or expired access token",
-				})
-			}
-        return
-    }
+		switch authErr {
+		case "required":
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"error":   "Unauthorized",
+				"message": "Bearer token is required",
+			})
+		case "invalid":
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"error":   "Unauthorized",
+				"message": "Invalid or expired access token",
+			})
+		}
+		return
+	}
 
-    userID, ok := getUserIDFromContext(c)
-    if !ok {
-        c.JSON(http.StatusUnauthorized, gin.H{
-            "error":   "Unauthorized",
-            "message": "Invalid or expired access token",
-        })
-        return
-    }
+	userID, ok := getUserIDFromContext(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"error":   "Unauthorized",
+			"message": "Invalid or expired access token",
+		})
+		return
+	}
 
-    resp, err := h.auth_service.SetupTOTP(userID)
-    if err != nil {
-        c.JSON(http.StatusInternalServerError, gin.H{
-            "error": err.Error(),
-        })
-        return
-    }
+	resp, err := h.auth_service.SetupTOTP(userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": err.Error(),
+		})
+		return
+	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"message":   "TOTP secret generated",
@@ -148,34 +148,34 @@ type VerifyTOTPRequest struct {
 
 func (h *AuthHandler) VerifyTOTP(c *gin.Context) {
 	if authErr, exists := c.Get("authError"); exists {
-        switch authErr {
-			case "required":
-				c.JSON(http.StatusUnauthorized, gin.H{
-					"error":   "Unauthorized",
-					"message": "Bearer token is required",
-				})
-			case "invalid":
-				c.JSON(http.StatusUnauthorized, gin.H{
-					"error":   "Unauthorized",
-					"message": "Invalid or expired access token",
-				})
-			}
-        return
-    }
+		switch authErr {
+		case "required":
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"error":   "Unauthorized",
+				"message": "Bearer token is required",
+			})
+		case "invalid":
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"error":   "Unauthorized",
+				"message": "Invalid or expired access token",
+			})
+		}
+		return
+	}
 
-    userID, ok := getUserIDFromContext(c)
-    if !ok {
-        c.JSON(http.StatusUnauthorized, gin.H{
-            "error":   "Unauthorized",
-            "message": "Invalid or expired access token",
-        })
-        return
-    }
+	userID, ok := getUserIDFromContext(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"error":   "Unauthorized",
+			"message": "Invalid or expired access token",
+		})
+		return
+	}
 
 	var req VerifyTOTPRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Invalid TOTP code",
+			"error":   "Invalid TOTP code",
 			"message": "The provided code is incorrect or expired",
 		})
 		return
@@ -189,9 +189,10 @@ func (h *AuthHandler) VerifyTOTP(c *gin.Context) {
 
 	if !okVerify {
 		c.JSON(http.StatusUnauthorized, gin.H{
-            "error":   "Unauthorized",
-            "message": "Invalid or expired access token",
-        })
+			"error":   "Unauthorized",
+			"message": "Invalid or expired access token",
+		})
+		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
@@ -201,13 +202,13 @@ func (h *AuthHandler) VerifyTOTP(c *gin.Context) {
 }
 
 func (ah *AuthHandler) LoginTOTP(ctx *gin.Context) {
-	var input domain.LoginInput
+	var input domain.LoginTOTPInput
 	if err := ctx.ShouldBindJSON(&input); err != nil {
 		utils.ResponseValidator(ctx, validation.HandleValidationErrors(err))
 		return
 	}
 
-	user, accessToken, err := ah.auth_service.Login(input.Email, input.Password)
+	user, accessToken, err := ah.auth_service.LoginTOTP(input.ID, input.TOTPCode)
 	if err != nil {
 		utils.ResponseError(ctx, err)
 		return
@@ -216,11 +217,9 @@ func (ah *AuthHandler) LoginTOTP(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, gin.H{
 		"accessToken": accessToken,
 		"user": gin.H{
-			"id":          user.Id,
-			"username":    user.Username,
-			"email":       user.Email,
-			"role":        "user",
-			"totpEnabled": true,
+			"id":       user.Id,
+			"username": user.Username,
+			"email":    user.Email,
 		},
 	})
 }
