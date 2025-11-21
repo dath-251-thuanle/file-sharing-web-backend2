@@ -119,8 +119,8 @@ func (s *fileService) UploadFile(ctx context.Context, fileHeader *multipart.File
 		hashStr := string(hashed)
 		passwordHash = &hashStr
 	}
-	fileExtension := filepath.Ext(fileHeader.Filename)
-	storageFileName := fileUUID + fileExtension
+
+	storageFileName := fileUUID
 	newFile := &domain.File{
 		Id:            fileUUID,
 		OwnerId:       ownerID,
@@ -269,12 +269,12 @@ func (s *fileService) DownloadFile(ctx context.Context, token string, userID str
 
 	fileReader, err := s.storage.GetFile(fileInfo.Id)
 	if err != nil {
-		return nil, nil, utils.WrapError(err, "Failed to retrieve file from storage", utils.ErrCodeInternal)
+		return nil, nil, err
 	}
 
 	file, err := io.ReadAll(fileReader)
 	if err != nil {
-		return nil, nil, utils.WrapError(err, "Failed to prepare file", utils.ErrCodeInternal)
+		return nil, nil, err
 	}
 
 	return fileInfo, file, nil
