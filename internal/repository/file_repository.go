@@ -91,7 +91,7 @@ func (r *fileRepository) GetFileByID(ctx context.Context, id string) (*domain.Fi
 			id, user_id, name, type, size, share_token, 
 			password, available_from, available_to, enable_totp, created_at, is_public
 		FROM files
-		WHERE id = $1 AND removed = FALSE
+		WHERE id = $1
 	`
 
 	var file domain.File
@@ -147,7 +147,7 @@ func (r *fileRepository) GetFileByToken(ctx context.Context, token string) (*dom
 			password, available_from, available_to, enable_totp, 
 			created_at, is_public
 		FROM files
-		WHERE share_token = $1 AND removed = FALSE
+		WHERE share_token = $1
 	`
 
 	var file domain.File
@@ -197,8 +197,7 @@ func (r *fileRepository) GetFileByToken(ctx context.Context, token string) (*dom
 
 func (r *fileRepository) DeleteFile(ctx context.Context, id string, userID string) error {
 	query := `
-        UPDATE files 
-		SET removed = TRUE
+        DELETE FROM files 
         WHERE id = $1 AND user_id = $2
     `
 
@@ -226,7 +225,7 @@ func (r *fileRepository) GetMyFiles(ctx context.Context, userID string, params d
 			id, user_id, name, type, size, share_token, 
 			available_from, available_to, enable_totp, created_at, is_public
 		FROM files
-		WHERE user_id = $1 AND removed = FALSE
+		WHERE user_id = $1
 	`
 	args := []interface{}{userID}
 	query := baseQuery
@@ -302,11 +301,7 @@ func (r *fileRepository) GetMyFiles(ctx context.Context, userID string, params d
 func (r *fileRepository) GetTotalUserFiles(ctx context.Context, userID string) (int, error) {
 	var total int
 
-	// Đảm bảo chỉ đếm các file chưa bị xóa (nếu có cột 'deleted' trong DB)
 	query := `SELECT COUNT(id) FROM files WHERE user_id = $1`
-
-	// Nếu có cột 'deleted', bạn nên thêm điều kiện:
-	// query := `SELECT COUNT(id) FROM files WHERE user_id = $1 AND deleted = FALSE`
 
 	err := r.db.QueryRowContext(ctx, query, userID).Scan(&total)
 	if err != nil {
@@ -318,7 +313,6 @@ func (r *fileRepository) GetTotalUserFiles(ctx context.Context, userID string) (
 func (r *fileRepository) GetFileSummary(ctx context.Context, userID string) (*domain.FileSummary, error) {
 	summary := &domain.FileSummary{}
 
-	// 1. Tính Active Files (available_from <= NOW < available_to)
 	activeQuery := `
         SELECT COUNT(id) FROM files 
         WHERE user_id = $1 
@@ -330,7 +324,6 @@ func (r *fileRepository) GetFileSummary(ctx context.Context, userID string) (*do
 		return nil, fmt.Errorf("failed to count active files: %w", err)
 	}
 
-	// 2. Tính Pending Files (Chưa có hiệu lực: NOW < available_from)
 	pendingQuery := `
         SELECT COUNT(id) FROM files 
         WHERE user_id = $1 
@@ -352,8 +345,6 @@ func (r *fileRepository) GetFileSummary(ctx context.Context, userID string) (*do
 		return nil, fmt.Errorf("failed to count expired files: %w", err)
 	}
 
-	// Nếu bạn có cột `deleted`, nên thêm điều kiện `AND deleted = FALSE` vào tất cả các truy vấn.
-
 	return summary, nil
 }
 
@@ -362,7 +353,7 @@ func (r *fileRepository) FindAll(ctx context.Context) ([]domain.File, error) {
         SELECT 
             id, user_id, name, type, size, share_token, 
             password, available_from, available_to, enable_totp, created_at, is_public
-        FROM files WHERE removed = FALSE
+        FROM files
         ORDER BY created_at DESC
     `
 
