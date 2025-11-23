@@ -40,8 +40,8 @@ Tính năng:
 ## Cấu trúc thư mục
 
 ```bash
-/
-├── cdm/
+/file-sharing
+├── cmd/
 │   └── server/
 │       └── main.go
 ├── config/
