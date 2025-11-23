@@ -155,24 +155,22 @@ func (fh *FileHandler) GetFileInfo(ctx *gin.Context) {
 	}
 
 	out := gin.H{
-		"file": gin.H{
-			"id":          file.Id,
-			"fileName":    file.FileName,
-			"fileSize":    file.FileSize,
-			"mimeType":    file.MimeType,
-			"shareToken":  file.ShareToken,
-			"shareLink":   fmt.Sprintf("http://localhost:8080/api/files%s", file.ShareToken),
-			"isPublic":    file.IsPublic,
-			"hasPassword": file.HasPassword,
+		"id":          file.Id,
+		"fileName":    file.FileName,
+		"fileSize":    file.FileSize,
+		"mimeType":    file.MimeType,
+		"shareToken":  file.ShareToken,
+		"shareLink":   fmt.Sprintf("http://localhost:8080/api/files%s", file.ShareToken),
+		"isPublic":    file.IsPublic,
+		"hasPassword": file.HasPassword,
 
-			"availableFrom": file.AvailableFrom,
-			"availableTo":   file.AvailableTo,
-			"status":        status,
+		"availableFrom": file.AvailableFrom,
+		"availableTo":   file.AvailableTo,
+		"status":        status,
 
-			"hoursRemaining": file.AvailableTo.Sub(file.AvailableFrom).Hours(),
+		"hoursRemaining": file.AvailableTo.Sub(file.AvailableFrom).Hours(),
 
-			"createdAt": file.CreatedAt,
-		},
+		"createdAt": file.CreatedAt,
 	}
 
 	if owner != nil {
