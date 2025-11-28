@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"mime/multipart"
 	"slices"
 
@@ -210,12 +211,17 @@ func (s *fileService) DeleteFile(ctx context.Context, fileID string, userID stri
 	if err.IsErr() {
 		return err
 	}
+	var requester domain.User
+	if errStatus := s.userRepo.FindById(userID, &requester); errStatus != nil {
 
+		return errStatus
+	}
 	// Kiểm tra quyền: Chỉ Owner hoặc Admin mới được xóa
+	isAdmin := requester.Role == "admin"
 	isOwner := file.OwnerId != nil && *file.OwnerId == userID
 	isAnonymous := file.OwnerId == nil
 
-	if isAnonymous || !isOwner {
+	if isAnonymous || (!isOwner && !isAdmin) {
 		// Cần thêm kiểm tra quyền Admin tại đây
 		return utils.Response(utils.ErrCodeDeleteValidationErr)
 	}
@@ -255,7 +261,11 @@ func (s *fileService) getFileInfo(ctx context.Context, id string, userID string,
 	} else if now.After(file.AvailableTo) {
 		file.Status = domain.FILE_EXPIRED
 	}
-
+	requester := domain.User{}
+	if err := s.userRepo.FindById(userID, &requester); err != nil {
+		return nil, nil, nil, err
+	}
+	isAdmin := requester.Role == "admin"
 	owner_ := domain.User{}
 	var owner *domain.User = nil
 	if s.userRepo.FindById(*file.OwnerId, &owner_) == nil {
@@ -266,27 +276,28 @@ func (s *fileService) getFileInfo(ctx context.Context, id string, userID string,
 	if err != nil {
 		return nil, nil, nil, err
 	}
+	if !isAdmin {
+		if !file.IsPublic && *file.OwnerId != userID {
+			if !slices.Contains(shareds.UserIds, userID) {
+				return nil, nil, nil, utils.Response(utils.ErrCodeGetForbidden)
+			}
 
-	if !file.IsPublic && *file.OwnerId != userID {
-		if !slices.Contains(shareds.UserIds, userID) {
-			return nil, nil, nil, utils.Response(utils.ErrCodeGetForbidden)
-		}
+			if file.Status == domain.FILE_EXPIRED {
+				return nil, nil, nil, utils.ResponseArgs(utils.ErrCodeFileExpired,
+					gin.H{
+						"expiredAt": file.AvailableTo,
+					},
+				)
+			}
 
-		if file.Status == domain.FILE_EXPIRED {
-			return nil, nil, nil, utils.ResponseArgs(utils.ErrCodeFileExpired,
-				gin.H{
-					"expiredAt": file.AvailableTo,
-				},
-			)
-		}
-
-		if file.Status == domain.FILE_PENDING {
-			return nil, nil, nil, utils.ResponseArgs(utils.ErrCodeFileLocked,
-				gin.H{
-					"availableFrom":       file.AvailableFrom,
-					"hoursUntilAvailable": file.AvailableFrom.Sub(now).Hours(),
-				},
-			)
+			if file.Status == domain.FILE_PENDING {
+				return nil, nil, nil, utils.ResponseArgs(utils.ErrCodeFileLocked,
+					gin.H{
+						"availableFrom":       file.AvailableFrom,
+						"hoursUntilAvailable": file.AvailableFrom.Sub(now).Hours(),
+					},
+				)
+			}
 		}
 	}
 
@@ -347,11 +358,25 @@ func (s *fileService) DownloadFile(ctx context.Context, token string, userID str
 }
 
 func (s *fileService) GetFileDownloadHistory(ctx context.Context, fileID string, userID string, pagenum, limit int) (*domain.FileDownloadHistory, *utils.ReturnStatus) {
-	history, err := s.fileRepo.GetFileDownloadHistory(ctx, fileID, userID)
+	file, err := s.fileRepo.GetFileByID(ctx, fileID)
 	if err.IsErr() {
 		return nil, err
 	}
+	var requester domain.User
+	if uErr := s.userRepo.FindById(userID, &requester); uErr != nil {
+		return nil, uErr
+	}
+	isAdmin := requester.Role == "admin"
 
+	isOwner := file.OwnerId != nil && *file.OwnerId == userID
+	if !isAdmin && !isOwner {
+		log.Println("Not the owner")
+		return nil, utils.Response(utils.ErrCodeGetForbidden)
+	}
+	history, err := s.fileRepo.GetFileDownloadHistory(ctx, fileID)
+	if err.IsErr() {
+		return nil, err
+	}
 	history.Pagination = domain.Pagination{
 		CurrentPage:  pagenum,
 		TotalPages:   (len(history.History) + limit) / limit,
@@ -389,6 +414,22 @@ func (s *fileService) GetFileDownloadHistory(ctx context.Context, fileID string,
 	return history, nil
 }
 
-func (s *fileService) GetFileStats(ctx context.Context, fileID string, userID string) (*domain.FileStat, *utils.ReturnStatus) {
-	return s.fileRepo.GetFileStats(ctx, fileID, userID)
+func (s *fileService) GetFileStats(ctx context.Context, fileID, userID string) (*domain.FileStat, *utils.ReturnStatus) {
+	file, err := s.fileRepo.GetFileByID(ctx, fileID)
+	if err.IsErr() {
+		return nil, err
+	}
+
+	var requester domain.User
+	if err := s.userRepo.FindById(userID, &requester); err != nil {
+		return nil, err
+	}
+
+	isOwner := file.OwnerId != nil && *file.OwnerId == userID
+	isAdmin := requester.Role == "admin"
+	if !isAdmin && !isOwner {
+		return nil, utils.Response(utils.ErrCodeStatForbidden)
+	}
+
+	return s.fileRepo.GetFileStats(ctx, fileID)
 }
