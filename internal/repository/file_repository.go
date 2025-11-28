@@ -23,8 +23,8 @@ type FileRepository interface {
 	GetFileSummary(ctx context.Context, userID string) (*domain.FileSummary, *utils.ReturnStatus)
 	FindAll(ctx context.Context) ([]domain.File, *utils.ReturnStatus)
 	RegisterDownload(ctx context.Context, fileID string, userID string) *utils.ReturnStatus
-	GetFileDownloadHistory(ctx context.Context, fileID string, userID string) (*domain.FileDownloadHistory, *utils.ReturnStatus)
-	GetFileStats(ctx context.Context, fileID string, userID string) (*domain.FileStat, *utils.ReturnStatus)
+	GetFileDownloadHistory(ctx context.Context, fileID string) (*domain.FileDownloadHistory, *utils.ReturnStatus)
+	GetFileStats(ctx context.Context, fileID string) (*domain.FileStat, *utils.ReturnStatus)
 }
 
 type fileRepository struct {
@@ -436,16 +436,11 @@ func (r *fileRepository) RegisterDownload(ctx context.Context, fileID string, us
 	return nil
 }
 
-func (r *fileRepository) GetFileDownloadHistory(ctx context.Context, fileID string, userID string) (*domain.FileDownloadHistory, *utils.ReturnStatus) {
+func (r *fileRepository) GetFileDownloadHistory(ctx context.Context, fileID string) (*domain.FileDownloadHistory, *utils.ReturnStatus) {
 	file, err := r.GetFileByID(ctx, fileID)
 	if err != nil {
 		log.Println("File retrieval failure")
 		return nil, err
-	}
-
-	if *file.OwnerId != userID {
-		log.Println("Not the owner")
-		return nil, utils.Response(utils.ErrCodeBearerInvalid)
 	}
 
 	history := domain.FileDownloadHistory{}
@@ -480,41 +475,48 @@ func (r *fileRepository) GetFileDownloadHistory(ctx context.Context, fileID stri
 	return &history, nil
 }
 
-func (r *fileRepository) GetFileStats(ctx context.Context, fileID string, userID string) (*domain.FileStat, *utils.ReturnStatus) {
+func (r *fileRepository) GetFileStats(ctx context.Context, fileID string) (*domain.FileStat, *utils.ReturnStatus) {
 	query := `
-		SELECT f.id, f.user_id, f.name, s.download_count, s.user_download_count, f.created_at, d.time
-		FROM files f
-			JOIN filestat s ON f.id = s.file_id
-			JOIN download d ON f.id = d.file_id
-		WHERE id = $1
-		ORDER BY d.time DESC
-		LIMIT 1;
-	`
+        SELECT 
+            f.id, 
+            f.user_id, 
+            f.name, 
+            COALESCE(s.download_count, 0), 
+            COALESCE(s.user_download_count, 0), 
+            f.created_at, 
+            MAX(d.time)
+        FROM files f
+        LEFT JOIN filestat s ON f.id = s.file_id
+        LEFT JOIN download d ON f.id = d.file_id
+        WHERE f.id = $1
+        GROUP BY f.id, f.user_id, f.name, s.download_count, s.user_download_count, f.created_at
+    `
 
 	stat := domain.FileStat{}
+	var ownerID sql.NullString
+	var lastDownloadTime sql.NullTime
 	row := r.db.QueryRowContext(ctx, query, fileID)
-	if row == nil {
-		return nil, utils.ResponseMsg(utils.ErrCodeInternal, "Error occured when executing query.")
-	}
-
-	ownerID := ""
 
 	err := row.Scan(
 		&stat.FileId,
-		&ownerID,
+		&ownerID, // Hứng vào NullString
 		&stat.FileName,
 		&stat.TotalDownloadCount,
 		&stat.UserDownloadCount,
 		&stat.CreatedAt,
-		&stat.LastDownloadedAt,
+		&lastDownloadTime, // Hứng vào NullTime
 	)
 
 	if err != nil {
-		return nil, utils.Response(utils.ErrCodeInternal)
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, utils.Response(utils.ErrCodeFileNotFound)
+		}
+		fmt.Println("DB Error:", err)
+		return nil, utils.ResponseMsg(utils.ErrCodeDatabaseError, err.Error())
 	}
 
-	if ownerID != userID {
-		return nil, utils.Response(utils.ErrCodeStatForbidden)
+	if lastDownloadTime.Valid {
+		stat.LastDownloadedAt = lastDownloadTime.Time
 	}
 
 	return &stat, nil
