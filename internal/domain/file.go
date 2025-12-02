@@ -2,24 +2,32 @@ package domain
 
 import "time"
 
+type FileStatus string
+
+const (
+	FILE_PENDING FileStatus = "pending"
+	FILE_ACTIVE  FileStatus = "active"
+	FILE_EXPIRED FileStatus = "expired"
+)
+
 type File struct {
 	Id            string     `json:"id" db:"id"`
 	OwnerId       *string    `json:"ownerId" db:"user_id"`
 	FileName      string     `json:"fileName" db:"name"`
-	StorageName   string     `json:"storageName" db:"storage_name"`
+	StorageName   string     `json:"-" db:"storage_name"`
 	FileSize      int64      `json:"fileSize" db:"size"`
 	MimeType      string     `json:"mimeType" db:"type"`
 	ShareToken    string     `json:"shareToken" db:"share_token"`
 	IsPublic      bool       `json:"isPublic" db:"is_public"`
 	HasPassword   bool       `json:"hasPassword" db:"has_password"`
 	PasswordHash  *string    `json:"-" db:"password"`
-	EnableTOTP    bool       `json:"enableTOTP" db:"enable_totp"`
+	EnableTOTP    bool       `json:"-" db:"enable_totp"`
 	AvailableFrom time.Time  `json:"availableFrom" db:"available_from"`
 	AvailableTo   time.Time  `json:"availableTo" db:"available_to"`
-	ValidityDays  int        `json:"validityDays" db:"validity_days"`
-	Status        string     `json:"status"`
+	ValidityDays  int        `json:"-" db:"validity_days"`
+	Status        FileStatus `json:"status"`
 	CreatedAt     time.Time  `json:"createdAt" db:"created_at"`
-	UpdatedAt     *time.Time `json:"updatedAt" db:"updated_at"`
+	UpdatedAt     *time.Time `json:"-" db:"updated_at"`
 }
 
 type Pagination struct {

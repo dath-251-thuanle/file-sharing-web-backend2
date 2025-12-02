@@ -41,7 +41,7 @@ func NewFileService(cfg *config.Config, fr repository.FileRepository, sr reposit
 }
 
 // Hàm tính toán thời gian hiệu lực
-func (s *fileService) calculateValidityPeriod(req *dto.UploadRequest) (time.Time, time.Time, int, error) {
+func (s *fileService) calculateValidityPeriod(req *dto.UploadRequest) (time.Time, time.Time, int, *utils.ReturnStatus) {
 	now := time.Now().UTC()
 	policy := s.cfg.Policy // Policy tĩnh
 
@@ -66,7 +66,7 @@ func (s *fileService) calculateValidityPeriod(req *dto.UploadRequest) (time.Time
 	// 2. Validation
 	// a. FROM < TO
 	if availableFrom.After(availableTo) {
-		return time.Time{}, time.Time{}, 0, utils.NewError("AvailableFrom cannot be after AvailableTo", utils.ErrCodeBadRequest)
+		return time.Time{}, time.Time{}, 0, utils.ResponseMsg(utils.ErrCodeBadRequest, "AvailableFrom cannot be after AvailableTo")
 	}
 
 	duration := availableTo.Sub(availableFrom)
@@ -77,24 +77,24 @@ func (s *fileService) calculateValidityPeriod(req *dto.UploadRequest) (time.Time
 	maxDuration := time.Duration(policy.MaxValidityDays) * 24 * time.Hour
 
 	if duration < minDuration {
-		return time.Time{}, time.Time{}, 0, utils.NewError(fmt.Sprintf("Validity period must be at least %d hours", policy.MinValidityHours), utils.ErrCodeBadRequest)
+		return time.Time{}, time.Time{}, 0, utils.ResponseMsg(utils.ErrCodeBadRequest, fmt.Sprintf("Validity period must be at least %d hours", policy.MinValidityHours))
 	}
 	if duration > maxDuration {
-		return time.Time{}, time.Time{}, 0, utils.NewError(fmt.Sprintf("Validity period cannot exceed %d days", policy.MaxValidityDays), utils.ErrCodeBadRequest)
+		return time.Time{}, time.Time{}, 0, utils.ResponseMsg(utils.ErrCodeBadRequest, fmt.Sprintf("Validity period cannot exceed %d days", policy.MaxValidityDays))
 	}
 
 	return availableFrom, availableTo, validityDays, nil
 }
 
-func (s *fileService) UploadFile(ctx context.Context, fileHeader *multipart.FileHeader, req *dto.UploadRequest, ownerID *string) (*domain.File, error) {
+func (s *fileService) UploadFile(ctx context.Context, fileHeader *multipart.FileHeader, req *dto.UploadRequest, ownerID *string) (*domain.File, *utils.ReturnStatus) {
 	// Kiểm tra kích thước file (Sử dụng MaxFileSizeMB từ Policy)
 	if fileHeader.Size > int64(s.cfg.Policy.MaxFileSizeMB)*1024*1024 {
-		return nil, utils.NewError(fmt.Sprintf("File size exceeds the limit of %dMB", s.cfg.Policy.MaxFileSizeMB), utils.ErrCodeBadRequest)
+		return nil, utils.ResponseMsg(utils.ErrCodeBadRequest, fmt.Sprintf("File size exceeds the limit of %dMB", s.cfg.Policy.MaxFileSizeMB))
 	}
 
 	// 1. Tính toán thời gian hiệu lực
 	availableFrom, availableTo, validityDays, err := s.calculateValidityPeriod(req)
-	if err != nil {
+	if err.IsErr() {
 		return nil, err
 	}
 
@@ -106,7 +106,7 @@ func (s *fileService) UploadFile(ctx context.Context, fileHeader *multipart.File
 	if req.Password != nil && *req.Password != "" {
 		hashed, err := bcrypt.GenerateFromPassword([]byte(*req.Password), bcrypt.DefaultCost)
 		if err != nil {
-			return nil, utils.WrapError(err, "Failed to hash password", utils.ErrCodeInternal)
+			return nil, utils.ResponseMsg(utils.ErrCodeInternal, err.Error())
 		}
 		hashStr := string(hashed)
 		passwordHash = &hashStr
@@ -133,16 +133,16 @@ func (s *fileService) UploadFile(ctx context.Context, fileHeader *multipart.File
 
 	// 3. Lưu file vật lý
 	_, err = s.storage.SaveFile(fileHeader, newFile.StorageName)
-	if err != nil {
-		return nil, utils.WrapError(err, "Failed to save file to storage", utils.ErrCodeInternal)
+	if err.IsErr() {
+		return nil, err
 	}
 
 	// 4. Lưu Metadata vào DB
 	savedFile, err := s.fileRepo.CreateFile(ctx, newFile)
-	if err != nil {
+	if err.IsErr() {
 		// QUAN TRỌNG: Nếu lưu DB lỗi, phải xóa file đã lưu vật lý!
 		s.storage.DeleteFile(newFile.StorageName)
-		return nil, utils.WrapError(err, "Failed to save file metadata", utils.ErrCodeInternal)
+		return nil, err
 	}
 
 	// 5. Xử lý SharedWith
@@ -158,21 +158,21 @@ func (s *fileService) UploadFile(ctx context.Context, fileHeader *multipart.File
 	return savedFile, nil
 }
 
-func (s *fileService) GetMyFiles(ctx context.Context, userID string, params domain.ListFileParams) (interface{}, error) {
+func (s *fileService) GetMyFiles(ctx context.Context, userID string, params domain.ListFileParams) (interface{}, *utils.ReturnStatus) {
 	// Lấy danh sách file của user đó
 	fileSummary, err := s.fileRepo.GetFileSummary(ctx, userID)
-	if err != nil {
+	if err.IsErr() {
 		// Log lỗi hoặc xử lý lỗi một cách nhẹ nhàng hơn nếu summary không bắt buộc
 		// Trong trường hợp này, ta sẽ trả về lỗi
-		return nil, utils.WrapError(err, "Failed to retrieve file summary", utils.ErrCodeInternal)
+		return nil, err
 	}
 	totalFiles, err := s.fileRepo.GetTotalUserFiles(ctx, userID)
-	if err != nil {
-		return nil, utils.WrapError(err, "Failed to retrieve total file count", utils.ErrCodeInternal)
+	if err.IsErr() {
+		return nil, err
 	}
 	files, err := s.fileRepo.GetMyFiles(ctx, userID, params)
-	if err != nil {
-		return nil, utils.WrapError(err, "Failed to retrieve user files", utils.ErrCodeInternal)
+	if err.IsErr() {
+		return nil, err
 	}
 	totalPages := 0
 	if params.Limit > 0 {
@@ -186,18 +186,29 @@ func (s *fileService) GetMyFiles(ctx context.Context, userID string, params doma
 		"limit":       params.Limit,
 	}
 
+	out := []gin.H{}
+
+	for _, f := range files {
+		out = append(out, gin.H{
+			"id":        f.Id,
+			"fileName":  f.FileName,
+			"status":    f.Status,
+			"createdAt": f.CreatedAt,
+		})
+	}
+
 	// 5. Trả về kết quả với dữ liệu thực tế
 	return gin.H{
-		"files":      files,
+		"files":      out,
 		"pagination": pagination,  // Dữ liệu phân trang thực tế
 		"summary":    fileSummary, // Dữ liệu summary thực tế
 	}, nil
 }
 
-func (s *fileService) DeleteFile(ctx context.Context, fileID string, userID string) error {
+func (s *fileService) DeleteFile(ctx context.Context, fileID string, userID string) *utils.ReturnStatus {
 	file, err := s.fileRepo.GetFileByID(ctx, fileID)
-	if err != nil {
-		return utils.NewError("File not found", utils.ErrCodeNotFound)
+	if err.IsErr() {
+		return err
 	}
 
 	// Kiểm tra quyền: Chỉ Owner hoặc Admin mới được xóa
@@ -206,123 +217,138 @@ func (s *fileService) DeleteFile(ctx context.Context, fileID string, userID stri
 
 	if isAnonymous || !isOwner {
 		// Cần thêm kiểm tra quyền Admin tại đây
-		return utils.NewError("Forbidden. Only the owner can delete the file", utils.ErrCodeUnauthorized)
+		return utils.Response(utils.ErrCodeDeleteValidationErr)
 	}
 
 	// Xóa vật lý trước
 	file.StorageName = fileID // Đảm bảo đúng tên file vật lý
-	if err := s.storage.DeleteFile(file.StorageName); err != nil {
-		return utils.WrapError(err, "Failed to delete file from storage", utils.ErrCodeInternal)
+	if err := s.storage.DeleteFile(file.StorageName); err.IsErr() {
+		return err
 	}
 
-	if err := s.fileRepo.DeleteFile(ctx, fileID, userID); err != nil {
-		return utils.WrapError(err, "Failed to delete file metadata", utils.ErrCodeInternal)
+	if err := s.fileRepo.DeleteFile(ctx, fileID, userID); err.IsErr() {
+		return err
 	}
 
 	return nil
 }
 
-func (s *fileService) getFileInfo(ctx context.Context, token string, userID string) (*domain.File, error) {
-	file, err := s.fileRepo.GetFileByToken(ctx, token)
-	if err != nil {
-		return nil, utils.WrapError(err, "Failed to get file info", utils.ErrCodeInternal)
+func (s *fileService) getFileInfo(ctx context.Context, id string, userID string, isToken bool) (*domain.File, *domain.User, []string, *utils.ReturnStatus) {
+	var file *domain.File = nil
+	var err *utils.ReturnStatus = nil
+	if isToken {
+		file, err = s.fileRepo.GetFileByToken(ctx, id)
+	} else {
+		file, err = s.fileRepo.GetFileByID(ctx, id)
+	}
+
+	if err.IsErr() {
+		return nil, nil, nil, err
+	}
+
+	now := time.Now()
+
+	file.Status = domain.FILE_ACTIVE
+
+	if now.Before(file.AvailableFrom) {
+		file.Status = domain.FILE_PENDING
+	} else if now.After(file.AvailableTo) {
+		file.Status = domain.FILE_EXPIRED
+	}
+
+	owner_ := domain.User{}
+	var owner *domain.User = nil
+	if s.userRepo.FindById(*file.OwnerId, &owner_) == nil {
+		owner = &owner_
 	}
 
 	shareds, err := s.sharedRepo.GetUsersSharedWith(ctx, file.Id)
 	if err != nil {
-		return nil, utils.WrapError(err, "Failed to get shared list", utils.ErrCodeInternal)
+		return nil, nil, nil, err
 	}
 
-	if !file.IsPublic {
-		if slices.Contains(shareds.UserIds, userID) || *file.OwnerId == userID {
-			return file, nil
+	if !file.IsPublic && *file.OwnerId != userID {
+		if !slices.Contains(shareds.UserIds, userID) {
+			return nil, nil, nil, utils.Response(utils.ErrCodeGetForbidden)
 		}
 
-		return nil, fmt.Errorf("permission denied to read file")
-	}
-
-	return file, nil
-}
-
-func (s *fileService) getFileInfoID(ctx context.Context, id string, userID string) (*domain.File, error) {
-	file, err := s.fileRepo.GetFileByID(ctx, id)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get file info: %w", err)
-	}
-
-	shareds, err := s.sharedRepo.GetUsersSharedWith(ctx, file.Id)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get shared list: %w", err)
-	}
-
-	if !file.IsPublic {
-		if slices.Contains(shareds.UserIds, userID) || *file.OwnerId == userID {
-			return file, nil
+		if file.Status == domain.FILE_EXPIRED {
+			return nil, nil, nil, utils.ResponseArgs(utils.ErrCodeFileExpired,
+				gin.H{
+					"expiredAt": file.AvailableTo,
+				},
+			)
 		}
 
-		return nil, fmt.Errorf("permission denied to read file")
+		if file.Status == domain.FILE_PENDING {
+			return nil, nil, nil, utils.ResponseArgs(utils.ErrCodeFileLocked,
+				gin.H{
+					"availableFrom":       file.AvailableFrom,
+					"hoursUntilAvailable": file.AvailableFrom.Sub(now).Hours(),
+				},
+			)
+		}
 	}
 
-	return file, nil
-}
+	outShared := []string{}
+	for _, id := range shareds.UserIds {
+		sharedowner := domain.User{}
+		serr := s.userRepo.FindById(id, &sharedowner)
+		if serr != nil {
+			return nil, nil, nil, utils.ResponseMsg(utils.ErrCodeInternal, "Failed to retrieve emails of shared users")
+		}
 
-func (s *fileService) GetFileInfo(ctx context.Context, token string, userID string) (*domain.File, error) {
-	file, err := s.getFileInfo(ctx, token, userID)
-
-	if err != nil {
-		return nil, err
+		outShared = append(outShared, sharedowner.Email)
 	}
 
-	return file, nil
+	return file, owner, outShared, nil
 }
 
-func (s *fileService) GetFileInfoID(ctx context.Context, id string, userID string) (*domain.File, error) {
-	file, err := s.getFileInfoID(ctx, id, userID)
-
-	if err != nil {
-		return nil, err
-	}
-
-	return file, nil
+func (s *fileService) GetFileInfo(ctx context.Context, token string, userID string) (*domain.File, *domain.User, []string, *utils.ReturnStatus) {
+	return s.getFileInfo(ctx, token, userID, true)
 }
 
-func (s *fileService) DownloadFile(ctx context.Context, token string, userID string, password string) (*domain.File, []byte, error) {
-	fileInfo, err := s.getFileInfo(ctx, token, userID)
+func (s *fileService) GetFileInfoID(ctx context.Context, id string, userID string) (*domain.File, *domain.User, []string, *utils.ReturnStatus) {
+	return s.getFileInfo(ctx, id, userID, false)
+}
 
-	if err != nil {
+func (s *fileService) DownloadFile(ctx context.Context, token string, userID string, password string) (*domain.File, []byte, *utils.ReturnStatus) {
+	fileInfo, _, _, err := s.getFileInfo(ctx, token, userID, true)
+
+	if err.IsErr() {
 		return nil, nil, err
 	}
 
 	if fileInfo.HasPassword {
 		if password == "" {
-			return nil, nil, fmt.Errorf("password needed to view file")
+			return nil, nil, utils.Response(utils.ErrCodeDownloadPasswordInvalid)
 		}
 
 		if bcrypt.CompareHashAndPassword([]byte(*fileInfo.PasswordHash), []byte(password)) != nil {
-			return nil, nil, fmt.Errorf("invalid password for file")
+			return nil, nil, utils.Response(utils.ErrCodeDownloadPasswordInvalid)
 		}
 	}
 
 	fileReader, err := s.storage.GetFile(fileInfo.Id)
-	if err != nil {
+	if err.IsErr() {
 		return nil, nil, err
 	}
 
-	file, err := io.ReadAll(fileReader)
-	if err != nil {
-		return nil, nil, err
+	file, readerr := io.ReadAll(fileReader)
+	if readerr != nil {
+		return nil, nil, utils.ResponseMsg(utils.ErrCodeInternal, readerr.Error())
 	}
 
-	if err := s.fileRepo.RegisterDownload(ctx, fileInfo.Id, userID); err != nil {
+	if err := s.fileRepo.RegisterDownload(ctx, fileInfo.Id, userID); err.IsErr() {
 		return nil, nil, err
 	}
 
 	return fileInfo, file, nil
 }
 
-func (s *fileService) GetFileDownloadHistory(ctx context.Context, fileID string, userID string, pagenum, limit int) (*domain.FileDownloadHistory, error) {
+func (s *fileService) GetFileDownloadHistory(ctx context.Context, fileID string, userID string, pagenum, limit int) (*domain.FileDownloadHistory, *utils.ReturnStatus) {
 	history, err := s.fileRepo.GetFileDownloadHistory(ctx, fileID, userID)
-	if err != nil {
+	if err.IsErr() {
 		return nil, err
 	}
 
@@ -361,4 +387,8 @@ func (s *fileService) GetFileDownloadHistory(ctx context.Context, fileID string,
 	}
 
 	return history, nil
+}
+
+func (s *fileService) GetFileStats(ctx context.Context, fileID string, userID string) (*domain.FileStat, *utils.ReturnStatus) {
+	return s.fileRepo.GetFileStats(ctx, fileID, userID)
 }

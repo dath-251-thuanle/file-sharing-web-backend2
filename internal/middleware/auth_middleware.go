@@ -25,7 +25,7 @@ func AuthMiddleware() gin.HandlerFunc {
 		if authHeader == "" || !strings.HasPrefix(authHeader, "Bearer ") {
 			ctx.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
 				"error":   "Unauthorized",
-				"message": "Bearer token is required",
+				"message": "Authentication token is required",
 			})
 			return
 		}
@@ -44,7 +44,7 @@ func AuthMiddleware() gin.HandlerFunc {
 		if err != nil {
 			ctx.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
 				"error":   "Unauthorized",
-				"message": "Invalid Bearer token",
+				"message": "Invalid or missing authentication token",
 			})
 			return
 		}
@@ -76,7 +76,7 @@ func AuthMiddlewareUpload() gin.HandlerFunc {
 		if err != nil {
 			ctx.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
 				"error":   "Unauthorized",
-				"message": "Invalid Bearer token",
+				"message": "Invalid authentication token",
 			})
 			return
 		}

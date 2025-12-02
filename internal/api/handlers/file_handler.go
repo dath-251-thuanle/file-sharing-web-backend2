@@ -29,7 +29,7 @@ func (fh *FileHandler) UploadFile(ctx *gin.Context) {
 
 	fileHeader, err := ctx.FormFile("file")
 	if err != nil {
-		utils.ResponseError(ctx, utils.NewError("File is required for upload", utils.ErrCodeBadRequest))
+		utils.ResponseMsg(utils.ErrCodeUploadBadRequest, "File is required").Export(ctx)
 		return
 	}
 
@@ -48,25 +48,16 @@ func (fh *FileHandler) UploadFile(ctx *gin.Context) {
 		userID = nil
 	}
 
-	uploadedFile, err := fh.file_service.UploadFile(ctx, fileHeader, &req, userID)
-	if err != nil {
-		utils.ResponseError(ctx, err)
+	uploadedFile, berr := fh.file_service.UploadFile(ctx, fileHeader, &req, userID)
+	if berr != nil {
+		berr.Export(ctx)
 		return
 	}
 
 	response := gin.H{
-		"id":            uploadedFile.Id,
-		"fileName":      uploadedFile.FileName,
-		"fileSize":      uploadedFile.FileSize,
-		"shareToken":    uploadedFile.ShareToken,
-		"shareLink":     fmt.Sprintf("http://%s/f/%s", ctx.Request.Host, uploadedFile.ShareToken),
-		"isPublic":      uploadedFile.IsPublic,
-		"hasPassword":   uploadedFile.HasPassword,
-		"availableFrom": uploadedFile.AvailableFrom,
-		"availableTo":   uploadedFile.AvailableTo,
-		"validityDays":  uploadedFile.ValidityDays,
-		"enableTOTP":    uploadedFile.EnableTOTP,
-		"createdAt":     uploadedFile.CreatedAt,
+		"id":         uploadedFile.Id,
+		"fileName":   uploadedFile.FileName,
+		"shareToken": uploadedFile.ShareToken,
 	}
 
 	//utils.ResponseSuccess(ctx, http.StatusCreated, "File uploaded successfully", gin.H{"file": response})
@@ -80,20 +71,24 @@ func (fh *FileHandler) UploadFile(ctx *gin.Context) {
 func (fh *FileHandler) DeleteFile(ctx *gin.Context) {
 	fileID := ctx.Param("id")
 
+	if uuid.Validate(fileID) != nil {
+		utils.ResponseMsg(utils.ErrCodeBadRequest, "Invalid ID provided").Export(ctx)
+		return
+	}
+
 	userID, exists := ctx.Get("userID")
 	if !exists {
-		utils.ResponseError(ctx, utils.NewError("Unauthorized access", utils.ErrCodeUnauthorized))
+		utils.Response(utils.ErrCodeUnauthorized).Export(ctx)
 		return
 	}
 
 	err := fh.file_service.DeleteFile(ctx, fileID, userID.(string))
 
 	if err != nil {
-		utils.ResponseError(ctx, err)
+		err.Export(ctx)
 		return
 	}
 
-	//utils.ResponseSuccess(ctx, http.StatusOK, "File deleted successfully", gin.H{"fileId": fileID})
 	ctx.JSON(http.StatusOK, gin.H{
 		"message": "File deleted successfully",
 		"fileId":  fileID,
@@ -124,14 +119,12 @@ func (fh *FileHandler) GetMyFiles(ctx *gin.Context) {
 	result, err := fh.file_service.GetMyFiles(ctx, userID.(string), params)
 
 	if err != nil {
-		utils.ResponseError(ctx, err)
+		err.Export(ctx)
 		return
 	}
 
 	//utils.ResponseSuccess(ctx, http.StatusOK, "User files retrieved successfully", gin.H{"file": result})
-	ctx.JSON(http.StatusOK, gin.H{
-		"file" : result,
-	})
+	ctx.JSON(http.StatusOK, result)
 }
 
 func (fh *FileHandler) GetFileInfo(ctx *gin.Context) {
@@ -141,23 +134,57 @@ func (fh *FileHandler) GetFileInfo(ctx *gin.Context) {
 		userID = nil
 	}
 
-	var result *domain.File = nil
-	var err error = nil
+	var file *domain.File = nil
+	var owner *domain.User = nil
+	var err *utils.ReturnStatus = nil
+	shared := []string{}
 
 	if uuid.Validate(ident) == nil {
-		result, err = fh.file_service.GetFileInfoID(ctx, ident, userID.(string))
+		file, owner, shared, err = fh.file_service.GetFileInfoID(ctx, ident, userID.(string))
 	} else {
-		result, err = fh.file_service.GetFileInfo(ctx, ident, userID.(string))
+		file, owner, shared, err = fh.file_service.GetFileInfo(ctx, ident, userID.(string))
 	}
 
 	if err != nil {
-		utils.ResponseError(ctx, utils.WrapError(err, "Failed to access file", utils.ErrCodeInternal))
+		err.Export(ctx)
 		return
+	}
+
+	out := gin.H{
+		"id":          file.Id,
+		"fileName":    file.FileName,
+		"fileSize":    file.FileSize,
+		"mimeType":    file.MimeType,
+		"shareToken":  file.ShareToken,
+		"shareLink":   fmt.Sprintf("http://localhost:8080/api/files/%s", file.ShareToken),
+		"isPublic":    file.IsPublic,
+		"hasPassword": file.HasPassword,
+
+		"availableFrom": file.AvailableFrom,
+		"availableTo":   file.AvailableTo,
+		"status":        file.Status,
+
+		"hoursRemaining": file.AvailableTo.Sub(file.AvailableFrom).Hours(),
+
+		"createdAt": file.CreatedAt,
+	}
+
+	if owner != nil {
+		out["owner"] = gin.H{
+			"id":       owner.Id,
+			"username": owner.Username,
+			"email":    owner.Email,
+			"role":     owner.Role,
+		}
+	}
+
+	if shared != nil {
+		out["sharedWith"] = shared
 	}
 
 	//utils.ResponseSuccess(ctx, http.StatusOK, "File retrieved successfully", gin.H{"file": result})
 	ctx.JSON(http.StatusOK, gin.H{
-		"file" : result,
+		"file": out,
 	})
 }
 
@@ -169,9 +196,9 @@ func (fh *FileHandler) DownloadFile(ctx *gin.Context) {
 		userID = nil
 	}
 
-	info, file, err := fh.file_service.DownloadFile(ctx, fileToken, userID.(string), password)
-	if err != nil {
-		utils.ResponseError(ctx, utils.WrapError(err, "Failed to download file", utils.ErrCodeInternal))
+	info, file, download_err := fh.file_service.DownloadFile(ctx, fileToken, userID.(string), password)
+	if download_err != nil {
+		download_err.Export(ctx)
 		return
 	}
 
@@ -192,11 +219,44 @@ func (fh *FileHandler) GetFileDownloadHistory(ctx *gin.Context) {
 		return
 	}
 
-	history, err := fh.file_service.GetFileDownloadHistory(ctx, fileID, userID.(string), page, limit)
-	if err != nil {
-		utils.ResponseError(ctx, utils.WrapError(err, "Failed to get file history", utils.ErrCodeInternal))
+	history, download_err := fh.file_service.GetFileDownloadHistory(ctx, fileID, userID.(string), page, limit)
+	if download_err != nil {
+		download_err.Export(ctx)
 		return
 	}
 
 	ctx.JSON(http.StatusOK, history)
+}
+
+func (fh *FileHandler) GetFileStats(ctx *gin.Context) {
+	fileID := ctx.Param("ident")
+	userID, exists := ctx.Get("userID")
+
+	if !exists {
+		userID = nil
+	}
+
+	if uuid.Validate(fileID) != nil {
+		utils.Response(utils.ErrCodeFileNotFound).Export(ctx)
+		return
+	}
+
+	stats, err := fh.file_service.GetFileStats(ctx, fileID, userID.(string))
+	if err != nil {
+		err.Export(ctx)
+		return
+	}
+
+	out := gin.H{
+		"fileId":   stats.FileId,
+		"fileName": stats.FileName,
+		"statistics": gin.H{
+			"downloadCount":     stats.TotalDownloadCount,
+			"uniqueDownloaders": stats.UserDownloadCount,
+			"lastDownloadedAt":  stats.LastDownloadedAt,
+			"createdAt":         stats.CreatedAt,
+		},
+	}
+
+	ctx.JSON(http.StatusOK, out)
 }

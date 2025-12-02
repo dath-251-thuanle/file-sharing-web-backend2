@@ -31,6 +31,7 @@ func (fr *FileRoutes) Register(r *gin.RouterGroup) {
 		protected.DELETE("/:id", fr.handler.DeleteFile)
 		protected.GET("/:ident", fr.handler.GetFileInfo)
 
+		protected.GET("/:ident/stats", fr.handler.GetFileStats)
 		protected.GET("/:ident/download", fr.handler.DownloadFile)
 		protected.GET("/:ident/download-history", fr.handler.GetFileDownloadHistory)
 	}

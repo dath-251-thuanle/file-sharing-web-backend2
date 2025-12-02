@@ -52,7 +52,7 @@ func (ah *AuthHandler) Login(ctx *gin.Context) {
 
 	user, token, err := ah.auth_service.Login(input.Email, input.Password)
 	if err != nil {
-		utils.ResponseError(ctx, err)
+		err.Export(ctx)
 		return
 	}
 
@@ -80,12 +80,11 @@ func (ah *AuthHandler) Logout(ctx *gin.Context) {
 	err := ah.auth_service.Logout(ctx)
 
 	if err != nil {
-		utils.ResponseError(ctx, err)
+		err.Export(ctx)
 		return
 	}
 
 	utils.ResponseSuccess(ctx, http.StatusOK, "User logged out", nil)
-
 }
 
 func getUserIDFromContext(c *gin.Context) (string, bool) {
@@ -210,7 +209,7 @@ func (ah *AuthHandler) LoginTOTP(ctx *gin.Context) {
 
 	user, accessToken, err := ah.auth_service.LoginTOTP(input.ID, input.TOTPCode)
 	if err != nil {
-		utils.ResponseError(ctx, err)
+		err.Export(ctx)
 		return
 	}
 

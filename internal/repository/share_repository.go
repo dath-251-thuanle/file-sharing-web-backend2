@@ -12,8 +12,8 @@ import (
 )
 
 type SharedRepository interface {
-	ShareFileWithUsers(ctx context.Context, fileID string, emails []string) error
-	GetUsersSharedWith(ctx context.Context, fileID string) (*domain.Shared, error)
+	ShareFileWithUsers(ctx context.Context, fileID string, emails []string) *utils.ReturnStatus
+	GetUsersSharedWith(ctx context.Context, fileID string) (*domain.Shared, *utils.ReturnStatus)
 }
 
 type sharedRepository struct {
@@ -24,7 +24,7 @@ func NewSharedRepository(db *sql.DB) SharedRepository {
 	return &sharedRepository{db: db}
 }
 
-func (r *sharedRepository) ShareFileWithUsers(ctx context.Context, fileID string, emails []string) error {
+func (r *sharedRepository) ShareFileWithUsers(ctx context.Context, fileID string, emails []string) *utils.ReturnStatus {
 	if len(emails) == 0 {
 		return nil
 	}
@@ -39,7 +39,7 @@ func (r *sharedRepository) ShareFileWithUsers(ctx context.Context, fileID string
 	userIDsRaw, err := r.db.QueryContext(ctx, userIDQuery)
 	if err != nil {
 		log.Println("Email retrieval failure")
-		return err
+		return utils.ResponseMsg(utils.ErrCodeDatabaseError, err.Error())
 	}
 
 	var queryValues []string
@@ -47,7 +47,7 @@ func (r *sharedRepository) ShareFileWithUsers(ctx context.Context, fileID string
 		var userid_tmp string
 		if err := userIDsRaw.Scan(&userid_tmp); err != nil {
 			log.Println("Email scan failure")
-			return err
+			return utils.ResponseMsg(utils.ErrCodeDatabaseError, err.Error())
 		}
 
 		queryValues = append(queryValues, fmt.Sprintf("('%s', '%s')", userid_tmp, fileID))
@@ -65,13 +65,13 @@ func (r *sharedRepository) ShareFileWithUsers(ctx context.Context, fileID string
 
 	if _, err := r.db.ExecContext(ctx, query); err != nil {
 		log.Println("INSERT failure")
-		return err
+		return utils.ResponseMsg(utils.ErrCodeDatabaseError, err.Error())
 	}
 
 	return nil
 }
 
-func (r *sharedRepository) GetUsersSharedWith(ctx context.Context, fileID string) (*domain.Shared, error) {
+func (r *sharedRepository) GetUsersSharedWith(ctx context.Context, fileID string) (*domain.Shared, *utils.ReturnStatus) {
 	// SELECT * FROM shared_with WHERE file_id = $1
 
 	query := `
@@ -86,7 +86,7 @@ func (r *sharedRepository) GetUsersSharedWith(ctx context.Context, fileID string
 	rows, err := r.db.QueryContext(ctx, query, fileID)
 	if err != nil {
 		log.Println(err)
-		return nil, utils.NewError("Failed to query for shared list", utils.ErrCodeInternal)
+		return nil, utils.ResponseMsg(utils.ErrCodeDatabaseError, err.Error())
 	}
 
 	for rows.Next() {
@@ -94,7 +94,7 @@ func (r *sharedRepository) GetUsersSharedWith(ctx context.Context, fileID string
 
 		if err := rows.Scan(&userid_tmp); err != nil {
 			log.Println(err)
-			return nil, utils.NewError("Error when scanning query result.", utils.ErrCodeInternal)
+			return nil, utils.ResponseMsg(utils.ErrCodeDatabaseError, err.Error())
 		}
 
 		share.UserIds = append(share.UserIds, userid_tmp)

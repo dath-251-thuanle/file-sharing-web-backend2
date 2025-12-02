@@ -25,12 +25,10 @@ func (ah *AdminHandler) GetSystemPolicy(ctx *gin.Context) {
 	policy, err := ah.admin_service.GetSystemPolicy(ctx)
 
 	if err != nil {
-		utils.ResponseError(ctx, err)
+		err.Export(ctx)
 		return
 	}
 
-	// Trả về cấu hình hệ thống
-	//utils.ResponseSuccess(ctx, http.StatusOK, "System policy retrieved successfully", policy)
 	ctx.JSON(http.StatusOK, policy)
 }
 
@@ -44,12 +42,10 @@ func (ah *AdminHandler) UpdateSystemPolicy(ctx *gin.Context) {
 	updatedPolicy, err := ah.admin_service.UpdateSystemPolicy(ctx, req.ToMap())
 
 	if err != nil {
-		utils.ResponseError(ctx, err)
+		err.Export(ctx)
 		return
 	}
 
-	// Cập nhật thành công
-	//utils.ResponseSuccess(ctx, http.StatusOK, "System policy updated successfully", gin.H{"policy": updatedPolicy})
 	ctx.JSON(http.StatusOK, gin.H{
 		"message": "System policy updated successfully",
 		"policy":  updatedPolicy,
@@ -57,18 +53,12 @@ func (ah *AdminHandler) UpdateSystemPolicy(ctx *gin.Context) {
 }
 
 func (ah *AdminHandler) CleanupExpiredFiles(ctx *gin.Context) {
-	// Endpoint này có thể được gọi bằng Admin token hoặc X-Cron-Secret
-	// Giả định Middleware đã xác thực quyền Admin hoặc Secret
-
 	deletedCount, err := ah.admin_service.CleanupExpiredFiles(ctx)
 	if err != nil {
-		utils.ResponseError(ctx, err)
+		err.Export(ctx)
 		return
 	}
 
-	//utils.ResponseSuccess(ctx, http.StatusOK, "Cleanup completed", gin.H{
-	//	"deletedFiles": deletedCount,
-	//})
 	ctx.JSON(http.StatusOK, gin.H{
 		"message":      "Cleanup completed",
 		"deletedFiles": deletedCount,

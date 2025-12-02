@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"database/sql"
 	"net/http"
 
 	"github.com/dath-251-thuanle/file-sharing-web-backend2/internal/domain"
@@ -25,11 +24,7 @@ func (uh *UserHandler) GetUserById(ctx *gin.Context) {
 	var user domain.User
 	createdUser, err := uh.user_service.GetUserById(id)
 	if err != nil {
-		if err == sql.ErrNoRows {
-			ctx.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
-		} else {
-			ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		}
+		err.Export(ctx)
 		return
 	} else {
 		user = *createdUser
@@ -47,11 +42,7 @@ func (uh *UserHandler) GetUserByEmail(ctx *gin.Context) {
 	var user domain.UserResponse
 	createdUser, err := uh.user_service.GetUserByEmail(email)
 	if err != nil {
-		if err == sql.ErrNoRows {
-			ctx.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
-		} else {
-			ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		}
+		err.Export(ctx)
 		return
 	} else {
 		user = *createdUser

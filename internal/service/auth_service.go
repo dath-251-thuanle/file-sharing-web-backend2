@@ -2,7 +2,6 @@ package service
 
 import (
 	"encoding/base64"
-	"errors"
 	"fmt"
 	"strings"
 
@@ -31,15 +30,15 @@ func NewAuthService(userRepo repository.UserRepository, authRepo repository.Auth
 	}
 }
 
-func (us *authService) CreateUser(username, password, email string) (*domain.User, error) {
+func (us *authService) CreateUser(username, password, email string) (*domain.User, *utils.ReturnStatus) {
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
-		return nil, utils.WrapError(err, "failed to hash password", utils.ErrCodeInternal)
+		return nil, utils.ResponseMsg(utils.ErrCodeInternal, "failed to hash password")
 	}
 	hashedUserID, err := uuid.NewRandom()
 	if err != nil {
-		return nil, utils.WrapError(err, "failed to create UserID", utils.ErrCodeInternal)
+		return nil, utils.ResponseMsg(utils.ErrCodeInternal, "failed to create UserID")
 	}
 	//TODO: add username and email uniqueness check
 	user := &domain.User{
@@ -54,76 +53,76 @@ func (us *authService) CreateUser(username, password, email string) (*domain.Use
 	return us.authRepo.Create(user)
 }
 
-func (as *authService) Login(email, password string) (*domain.User, string, error) {
+func (as *authService) Login(email, password string) (*domain.User, string, *utils.ReturnStatus) {
 	email = utils.NormalizeString(email)
 	user := &domain.User{}
 	err := as.userRepo.FindByEmail(email, user)
 	if err != nil {
 		fmt.Println("Login failed: User not found")
-		return nil, "", utils.NewError("Invalid email or password", utils.ErrCodeUnauthorized)
+		return nil, "", utils.Response(utils.ErrCodeLoginInvalid)
 	}
-	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password))
-	if err != nil {
-		return nil, "", errors.New("invalid email or password")
+
+	if bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password)) != nil {
+		return nil, "", utils.Response(utils.ErrCodeLoginInvalid)
 	}
 
 	if user.EnableTOTP {
 		cid, err := uuid.NewUUID()
 		if err != nil {
-			return nil, "", utils.NewError("Failed to generate CID", utils.ErrCodeInternal)
+			return nil, "", utils.ResponseMsg(utils.ErrCodeInternal, "Failed to generate CID")
 		}
-		err = as.userRepo.AddTimestamp(user.Id, cid.String())
-		if err != nil {
-			return nil, "", utils.NewError("Failed to add timestamp", utils.ErrCodeInternal)
+		timstamp_err := as.userRepo.AddTimestamp(user.Id, cid.String())
+		if timstamp_err != nil {
+			return nil, "", timstamp_err
 		}
 		return user, cid.String(), nil
 	}
 
-	accessToken, err := as.tokenService.GenerateAccessToken(*user)
+	accessToken, gen_err := as.tokenService.GenerateAccessToken(*user)
 
-	if err != nil {
-		fmt.Println("Error generating access token:", err)
-		return nil, "", utils.NewError("Failed to generate access token", utils.ErrCodeInternal)
+	if gen_err != nil {
+		fmt.Println("*utils.ReturnStatus generating access token:", err)
+		return nil, "", utils.ResponseMsg(utils.ErrCodeInternal, fmt.Sprintf("Failed to generate access token: %s", gen_err.Error()))
 	}
 
 	return user, accessToken, nil
 
 }
 
-func (as *authService) LoginTOTP(id, totpCode string) (*domain.User, string, error) {
+func (as *authService) LoginTOTP(id, totpCode string) (*domain.User, string, *utils.ReturnStatus) {
 	user := &domain.User{}
 	err := as.userRepo.FindById(id, user)
 	if err != nil {
 		fmt.Println("Login failed: User not found")
-		return nil, "", utils.NewError("Invalid ID", utils.ErrCodeUnauthorized)
+		return nil, "", utils.ResponseMsg(utils.ErrCodeUnauthorized, "Invalid ID")
 	}
 	secret := user.SecretTOTP
 	if !totp.Validate(totpCode, secret) {
-		return nil, "", utils.NewError("Invalid or expired TOTP code", utils.ErrCodeUnauthorized)
+		return nil, "", utils.ResponseMsg(utils.ErrCodeUnauthorized, "Invalid or expired TOTP code")
 	}
 
-	accessToken, err := as.tokenService.GenerateAccessToken(*user)
+	accessToken, gen_err := as.tokenService.GenerateAccessToken(*user)
 
-	if err != nil {
-		fmt.Println("Error generating access token:", err)
-		return nil, "", utils.NewError("Failed to generate access token", utils.ErrCodeInternal)
+	if gen_err != nil {
+		fmt.Println("*utils.ReturnStatus generating access token:", gen_err)
+		return nil, "", utils.ResponseMsg(utils.ErrCodeUnauthorized, fmt.Sprintf("Failed to generate access token: %s", gen_err.Error()))
 	}
 
 	return user, accessToken, nil
 
 }
 
-func (as *authService) Logout(ctx *gin.Context) error {
+func (as *authService) Logout(ctx *gin.Context) *utils.ReturnStatus {
 	authHeader := ctx.GetHeader("Authorization")
 	if authHeader == "" || !strings.HasPrefix(authHeader, "Bearer ") {
-		return utils.NewError("Missing Authorization header", utils.ErrCodeUnauthorized)
+		return utils.ResponseMsg(utils.ErrCodeUnauthorized, "Missing Authorization header")
 	}
 
 	accessToken := strings.TrimPrefix(authHeader, "Bearer ")
 
 	claims, err := as.tokenService.ParseToken(accessToken)
 	if err != nil {
-		return utils.NewError("Invalid access token", utils.ErrCodeUnauthorized)
+		return utils.ResponseMsg(utils.ErrCodeUnauthorized, "Invalid access token")
 	}
 
 	return as.authRepo.BlacklistToken(
@@ -132,14 +131,14 @@ func (as *authService) Logout(ctx *gin.Context) error {
 	)
 }
 
-func (as *authService) SetupTOTP(userID string) (*TOTPSetupResponse, error) {
+func (as *authService) SetupTOTP(userID string) (*TOTPSetupResponse, *utils.ReturnStatus) {
 	const appName = "file-sharing"
 	key, err := totp.Generate(totp.GenerateOpts{
 		Issuer:      appName,
 		AccountName: fmt.Sprintf("user-%s", userID),
 	})
 	if err != nil {
-		return nil, err
+		return nil, utils.ResponseMsg(utils.ErrCodeInternal, err.Error())
 	}
 
 	secret := key.Secret()
@@ -151,7 +150,7 @@ func (as *authService) SetupTOTP(userID string) (*TOTPSetupResponse, error) {
 
 	png, err := qrcode.Encode(otpURL, qrcode.Medium, 256)
 	if err != nil {
-		return nil, err
+		return nil, utils.ResponseMsg(utils.ErrCodeInternal, err.Error())
 	}
 	qrBase64 := "data:image/png;base64," + base64.StdEncoding.EncodeToString(png)
 
@@ -161,7 +160,7 @@ func (as *authService) SetupTOTP(userID string) (*TOTPSetupResponse, error) {
 	}, nil
 }
 
-func (as *authService) VerifyTOTP(userID string, code string) (bool, error) {
+func (as *authService) VerifyTOTP(userID string, code string) (bool, *utils.ReturnStatus) {
 	secret, err := as.authRepo.GetSecret(userID)
 	if err != nil {
 		return false, err
@@ -171,7 +170,7 @@ func (as *authService) VerifyTOTP(userID string, code string) (bool, error) {
 
 	if valid {
 		if err := as.authRepo.EnableTOTP(userID); err != nil {
-			return true, fmt.Errorf("verified but failed to enable status: %v", err)
+			return true, utils.ResponseMsg(utils.ErrCodeInternal, fmt.Sprintf("verified but failed to enable status: %v", err))
 		}
 	}
 

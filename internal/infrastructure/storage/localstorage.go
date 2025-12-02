@@ -8,6 +8,8 @@ import (
 	"mime/multipart"
 	"os"
 	"path/filepath"
+
+	"github.com/dath-251-thuanle/file-sharing-web-backend2/pkg/utils"
 )
 
 type LocalStorage struct {
@@ -36,36 +38,36 @@ func NewLocalStorage(uploadDir string) Storage {
 	return &LocalStorage{UploadDir: absPath}
 }
 
-func (s *LocalStorage) SaveFile(file *multipart.FileHeader, filename string) (string, error) {
+func (s *LocalStorage) SaveFile(file *multipart.FileHeader, filename string) (string, *utils.ReturnStatus) {
 	// Dòng này sử dụng đường dẫn tuyệt đối đã được lưu trong s.UploadDir
 	dst := filepath.Join(s.UploadDir, filename)
 
 	src, err := file.Open()
 	if err != nil {
-		return "", fmt.Errorf("failed to open file: %w", err)
+		return "", utils.ResponseMsg(utils.ErrCodeInternal, fmt.Sprintf("failed to open file: %s", err))
 	}
 	defer src.Close()
 
 	out, err := os.Create(dst)
 	if err != nil {
-		return "", fmt.Errorf("failed to create destination file: %w", err)
+		return "", utils.ResponseMsg(utils.ErrCodeInternal, fmt.Sprintf("failed to create destination file: %s", err))
 	}
 	defer out.Close()
 
 	_, err = io.Copy(out, src)
 	if err != nil {
-		return "", fmt.Errorf("failed to save file: %w", err)
+		return "", utils.ResponseMsg(utils.ErrCodeInternal, fmt.Sprintf("failed to save file: %s", err))
 	}
 
 	return dst, nil
 }
 
-func (s *LocalStorage) GetFile(filename string) (io.Reader, error) {
+func (s *LocalStorage) GetFile(filename string) (io.Reader, *utils.ReturnStatus) {
 	dst := filepath.Join(s.UploadDir, filename)
 
 	file, err := os.Open(dst)
 	if err != nil {
-		return nil, fmt.Errorf("failed to open file: %w", err)
+		return nil, utils.ResponseMsg(utils.ErrCodeInternal, fmt.Sprintf("failed to open file: %s", err))
 	}
 
 	var reader io.Reader = file
@@ -73,7 +75,7 @@ func (s *LocalStorage) GetFile(filename string) (io.Reader, error) {
 	return reader, nil
 }
 
-func (s *LocalStorage) DeleteFile(filename string) error {
+func (s *LocalStorage) DeleteFile(filename string) *utils.ReturnStatus {
 	path := filepath.Clean(filepath.Join(s.UploadDir, filename))
 	if filename == "" {
 		log.Printf("[DEBUG DELETE] Attempting to delete file:\n- Filename (DB): %s\n- UploadDir: %s\n- Full Path: %s", filename, s.UploadDir, path)
@@ -89,11 +91,11 @@ func (s *LocalStorage) DeleteFile(filename string) error {
 
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil
+			return utils.Response(utils.ErrCodeFileNotFound)
 		}
 
 		// Lỗi xóa file thông thường
-		return fmt.Errorf("failed to delete file %s at %s: %w", filename, path, err)
+		return utils.ResponseMsg(utils.ErrCodeInternal, fmt.Sprintf("failed to delete file %s at %s: %s", filename, path, err))
 	}
 	return nil
 }

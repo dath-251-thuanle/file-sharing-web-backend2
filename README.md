@@ -38,11 +38,11 @@ Tính năng:
 ***NHÓM B: API (Authentication, User Management, Statistics & Analytics)**
 
 ## Cấu trúc thư mục
+
 ```bash
-/
-├── cdm/
+/file-sharing
+├── cmd/
 │   └── server/
-│       ├── .env
 │       └── main.go
 ├── config/
 │   ├── app.yaml
@@ -53,24 +53,32 @@ Tính năng:
 ├── internal/
 │   ├── api/
 │   │   ├── dto/
+│   │   │   ├── admin_dto.go
 │   │   │   ├── auth_dto.go
 │   │   │   ├── file_dto.go
 │   │   │   └── user_dto.go
 │   │   ├── handlers/
-│   │   │   ├── admin_handler.gp
+│   │   │   ├── admin_handler.go
 │   │   │   ├── auth_handler.go
 │   │   │   ├── file_handler.go
 │   │   │   └── user_handler.go
 │   │   └── routes/
+│   │       ├── admin_routes.go
 │   │       ├── auth_routes.go
-│   │       ├── router.go
+│   │       └── file_routes.go
+│   │       └── router.go
 │   │       └── user_routes.go
 │   ├── app/
+│   │   ├── admin_module.go
 │   │   ├── app.go
 │   │   ├── auth_module.go
+│   │   ├── file_module.go
 │   │   └── user_module.go
 │   ├── domain/
 │   │   ├── auth.go
+│   │   ├── file_stat.go
+│   │   ├── file.go
+│   │   ├── share_with.go
 │   │   └── user.go
 │   ├── infrastructure/
 │   │   ├── database/
@@ -79,20 +87,29 @@ Tính năng:
 │   │   └── jwt/
 │   │       ├── interface.go
 │   │       └── jwt.go
+│   │   └── storage/
+│   │       ├── localstorage.go
+│   │       └── storage.go
 │   ├── middleware/
+│   │   └── admin_middleware.go
 │   │   └── auth_middleware.go
 │   ├── repository/
 │   │   ├── auth_repository.go
+│   │   ├── file_repository.go
 │   │   ├── interface.go
+│   │   ├── share_repository.go
 │   │   └── user_repository.go
 │   └── service/
+│       ├── admin_service.go
 │       ├── auth_service.go
+│       ├── file_service.go
 │       ├── interface.go
 │       └── user_service.go
 ├── pkg/
 │   ├── utils/
 │   │   ├── convert.go
 │   │   ├── helper.go
+│   │   └── random.go
 │   │   └── response.go
 │   └── validation/
 │       ├── custom_validation.go
@@ -100,9 +117,11 @@ Tính năng:
 ├── test/
 │   ├── auth_test.go
 │   └── file_test.go
-├── .DS_Store
-├── .env
+├── .age.key.pub
+├── dev.enc
+├── example.env
 ├── Makefile
+├── Dockerfile
 ├── docker-compose.yml
 ├── go.mod
 ├── go.sum
@@ -117,29 +136,24 @@ Tính năng:
 
 ## Hướng dẫn cài đặt
 
-Setup docker:
+Tạo file .env tại thư mục gốc:
 ```
-docker run --name postgres-db -e POSTGRES_PASSWORD=postgres -p 5432:5432 -d postgres
-```
-
-Tạo user và database:
-```
-docker exec -it postgres-db psql -U postgres
-
-# Đã vào shell của postgres
-
-CREATE USER haixon WITH SUPERUSER PASSWORD '123456';
-
-CREATE DATABASE "file-sharing";
-
-exit;
+cp example.env .env 
+# Điền các thông số cấu hình (DB connection, JWT, v.v.).
 ```
 
-Init và chạy server:
+Khởi chạy hệ thống bằng Docker:
 ```
-make            # Chạy các lênh SQL trong init.sql để tạo bảng (chỉ dùng 1 lần cho 1 docker)
+docker compose up -d
+```
 
-make server     # Chạy server
+Tạo bảng trong PostgreSQL:
+```
+docker exec -i postgres-db psql -U haixon -d file-sharing < internal/infrastructure/database/init.sql
+```
+Chạy server bằng Makefile (tùy chọn):
+```
+make server
 ```
 
 Ở đây có thể dùng Postman hoặc curl để kiểm thử các API.

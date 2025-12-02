@@ -25,11 +25,11 @@ func NewAdminService(cfg *config.Config, fr repository.FileRepository, s storage
 	}
 }
 
-func (s *adminService) GetSystemPolicy(ctx context.Context) (*config.SystemPolicy, error) {
+func (s *adminService) GetSystemPolicy(ctx context.Context) (*config.SystemPolicy, *utils.ReturnStatus) {
 	return s.cfg.Policy, nil
 }
 
-func (s *adminService) UpdateSystemPolicy(ctx context.Context, updates map[string]any) (*config.SystemPolicy, error) {
+func (s *adminService) UpdateSystemPolicy(ctx context.Context, updates map[string]any) (*config.SystemPolicy, *utils.ReturnStatus) {
 	// Kiểm tra tính hợp lệ của DefaultValidityDays so với MaxValidityDays (cần convert sang int)
 	if maxDaysVal, ok := updates["max_validity_days"]; ok {
 		if defaultDaysVal, ok := updates["default_validity_days"]; ok {
@@ -37,7 +37,7 @@ func (s *adminService) UpdateSystemPolicy(ctx context.Context, updates map[strin
 			defaultDays := defaultDaysVal.(int)
 
 			if defaultDays > maxDays {
-				return nil, utils.NewError("Default validity days cannot be greater than max validity days", utils.ErrCodeBadRequest)
+				return nil, utils.ResponseMsg(utils.ErrCodeBadRequest, "Default validity days cannot be greater than max validity days")
 			}
 		}
 	}
@@ -60,11 +60,11 @@ func (s *adminService) UpdateSystemPolicy(ctx context.Context, updates map[strin
 	return s.cfg.Policy, nil
 }
 
-func (s *adminService) CleanupExpiredFiles(ctx context.Context) (int, error) {
+func (s *adminService) CleanupExpiredFiles(ctx context.Context) (int, *utils.ReturnStatus) {
 	// Giả định FileRepository có hàm FindAll để lấy TẤT CẢ files
 	files, err := s.fileRepo.FindAll(ctx)
-	if err != nil {
-		return 0, utils.WrapError(err, "Failed to retrieve all files for cleanup", utils.ErrCodeInternal)
+	if err.IsErr() {
+		return 0, err
 	}
 
 	now := time.Now().UTC()
@@ -75,7 +75,7 @@ func (s *adminService) CleanupExpiredFiles(ctx context.Context) (int, error) {
 		// 1. Kiểm tra ngày hết hạn
 		if file.AvailableTo.Before(now) {
 
-			if err := s.storage.DeleteFile(file.FileName); err != nil {
+			if err := s.storage.DeleteFile(file.FileName); err.IsErr() {
 				// Log lỗi nhưng tiếp tục sang file tiếp theo
 				log.Printf("Cleanup Error: Failed to delete physical file %s: %v", file.FileName, err)
 				continue
@@ -90,7 +90,7 @@ func (s *adminService) CleanupExpiredFiles(ctx context.Context) (int, error) {
 			}
 
 			// Xóa file (chỉ áp dụng cho file có Owner)
-			if err := s.fileRepo.DeleteFile(ctx, file.Id, ownerID); err != nil {
+			if err := s.fileRepo.DeleteFile(ctx, file.Id, ownerID); err.IsErr() {
 				// Log lỗi nhưng tiếp tục
 				log.Printf("Cleanup Error: Failed to delete metadata for file %s: %v", file.Id, err)
 				continue
