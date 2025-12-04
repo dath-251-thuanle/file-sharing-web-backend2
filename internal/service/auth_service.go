@@ -88,29 +88,56 @@ func (as *authService) Login(email, password string) (*domain.User, string, *uti
 	return user, accessToken, nil
 
 }
+func (as *authService) LoginTOTP(cid, totpCode string) (*domain.User, string, *utils.ReturnStatus) {
+	// Find session
+	sess := &domain.UsersLoginSession{}
+	if err := as.userRepo.FindByCId(cid, sess); err != nil {
+		return nil, "", utils.ResponseMsg(utils.ErrCodeUnauthorized, "Wrong CID")
+	}
 
-func (as *authService) LoginTOTP(id, totpCode string) (*domain.User, string, *utils.ReturnStatus) {
+	// Find user
 	user := &domain.User{}
-	err := as.userRepo.FindById(id, user)
-	if err != nil {
-		fmt.Println("Login failed: User not found")
+	if err := as.userRepo.FindById(sess.Id, user); err != nil {
 		return nil, "", utils.ResponseMsg(utils.ErrCodeUnauthorized, "Invalid ID")
 	}
-	secret := user.SecretTOTP
-	if !totp.Validate(totpCode, secret) {
+
+	// Validate TOTP
+	if !totp.Validate(totpCode, user.SecretTOTP) {
 		return nil, "", utils.ResponseMsg(utils.ErrCodeUnauthorized, "Invalid or expired TOTP code")
 	}
 
-	accessToken, gen_err := as.tokenService.GenerateAccessToken(*user)
+	// Parse UUID & check expiration
+	CID, err := uuid.Parse(cid)
+	if err != nil {
+		return nil, "", utils.ResponseMsg(utils.ErrCodeUnauthorized, "Invalid CID format")
+	}
 
-	if gen_err != nil {
-		fmt.Println("*utils.ReturnStatus generating access token:", gen_err)
-		return nil, "", utils.ResponseMsg(utils.ErrCodeUnauthorized, fmt.Sprintf("Failed to generate access token: %s", gen_err.Error()))
+	ts := CID.Time()
+	now, _, err := uuid.GetTime()
+	if err != nil {
+		return nil, "", utils.ResponseMsg(utils.ErrCodeUnauthorized, "Failed to get current time")
+	}
+
+	// Always delete timestamp first
+	if err := as.userRepo.DeleteTimestamp(user.Id); err != nil {
+		return nil, "", utils.ResponseMsg(utils.ErrCodeUnauthorized, "Delete timestamp failed")
+	}
+
+	// Check expiration (5 minutes)
+	if int64(now-ts) > 300*10_000_000 {
+		return nil, "", utils.ResponseMsg(utils.ErrCodeUnauthorized, "CID has expired")
+	}
+
+	// Generate access token
+	accessToken, err := as.tokenService.GenerateAccessToken(*user)
+	if err != nil {
+		return nil, "", utils.ResponseMsg(utils.ErrCodeUnauthorized,
+			fmt.Sprintf("Failed to generate access token: %s", err))
 	}
 
 	return user, accessToken, nil
-
 }
+
 
 func (as *authService) Logout(ctx *gin.Context) *utils.ReturnStatus {
 	authHeader := ctx.GetHeader("Authorization")
@@ -132,10 +159,16 @@ func (as *authService) Logout(ctx *gin.Context) *utils.ReturnStatus {
 }
 
 func (as *authService) SetupTOTP(userID string) (*TOTPSetupResponse, *utils.ReturnStatus) {
-	const appName = "file-sharing"
+	user := &domain.User{}
+	error := as.userRepo.FindById(userID, user)
+	if error != nil {
+		return nil, utils.ResponseMsg(utils.ErrCodeInternal, "Invalid ID")
+	}
+
+	const appName = "File Sharing"
 	key, err := totp.Generate(totp.GenerateOpts{
 		Issuer:      appName,
-		AccountName: fmt.Sprintf("user-%s", userID),
+		AccountName: user.Username,
 	})
 	if err != nil {
 		return nil, utils.ResponseMsg(utils.ErrCodeInternal, err.Error())

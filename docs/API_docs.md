@@ -20,7 +20,7 @@ Tạo tài khoản mới (không bắt buộc để upload).
 {
     "username": "nam123",
     "email": "<nam@example.com>",
-    "password": "123456",
+    "password": "123456"
 }
 ```
 | Field        | Type    | Required | Description                             |
@@ -33,10 +33,9 @@ Tạo tài khoản mới (không bắt buộc để upload).
 ```json
 {
     "message": "User registered successfully",
-    "userId": "550e8400-e29b-41d4-a716-446655440000",
+    "userId": "550e8400-e29b-41d4-a716-446655440000"
 }
 ```
-
 ## `POST /api/auth/login`
 
 Đăng nhập để lấy JWT token.
@@ -63,7 +62,6 @@ Tạo tài khoản mới (không bắt buộc để upload).
 ```json
 {
     "cid": "431ba686-c69d....",
-    "id": "a3c34041-7e57e5...",
     "message": "TOTP verification required",
     "requireTOTP": true
 }
@@ -75,7 +73,7 @@ Xác thực mã TOTP (6 chữ số).
 **Request Body**
 ```json
 {
-    "id": "a3c34041-7e57e5...",
+    "cid": "a3c34041-7e57e5...",
     "code": "123456"
 }
 ```

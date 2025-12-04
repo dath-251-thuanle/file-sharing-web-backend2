@@ -10,7 +10,9 @@ import (
 type UserRepository interface {
 	FindById(id string, user *domain.User) *utils.ReturnStatus
 	FindByEmail(email string, user *domain.User) *utils.ReturnStatus
+	FindByCId(cid string, user *domain.UsersLoginSession) *utils.ReturnStatus
 	AddTimestamp(id string, cid string) *utils.ReturnStatus
+	DeleteTimestamp(id string) *utils.ReturnStatus
 }
 
 type AuthRepository interface {

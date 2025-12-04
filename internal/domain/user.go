@@ -23,3 +23,8 @@ type UserResponse struct {
 	Role       string `json:"role"`
 	EnableTOTP bool   `json:"totpEnabled"`
 }
+
+type UsersLoginSession struct {
+	Id			string `json:"id"`
+	Cid			string `json:"cid"`
+}

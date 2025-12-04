@@ -38,6 +38,16 @@ func (ur *SQLUserRepository) FindByEmail(email string, user *domain.User) *utils
 	return nil
 }
 
+func (ur *SQLUserRepository) FindByCId(cid string, user *domain.UsersLoginSession) *utils.ReturnStatus {
+	row := ur.db.QueryRow("SELECT * FROM usersloginsession WHERE cid = $1", cid)
+	err := row.Scan(&user.Id, &user.Cid)
+	if err != nil {
+		return utils.ErrIfExists(utils.ErrCodeInternal, err)
+	}
+
+	return nil
+}
+
 func (ur *SQLUserRepository) AddTimestamp(id string, cid string) *utils.ReturnStatus {
 	_, err := ur.db.Exec(`
 		INSERT INTO usersLoginSession (id, cid)
@@ -45,6 +55,15 @@ func (ur *SQLUserRepository) AddTimestamp(id string, cid string) *utils.ReturnSt
 		ON CONFLICT (id) DO UPDATE 
 		SET cid = EXCLUDED.cid
 	`, id, cid)
+
+	return utils.ErrIfExists(utils.ErrCodeDatabaseError, err)
+}
+
+func (ur *SQLUserRepository) DeleteTimestamp(id string) *utils.ReturnStatus {
+	_, err := ur.db.Exec(`
+		DELETE FROM usersLoginSession
+		WHERE id = $1
+	`, id)
 
 	return utils.ErrIfExists(utils.ErrCodeDatabaseError, err)
 }
