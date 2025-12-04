@@ -1,0 +1,19 @@
+name: CI testing
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+jobs:
+  run-ci-testing:
+    runs-on: self-hosted
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Check Go
+        run: go version
+      - name: Build
+        run: go build -v ./...
+      - name: Run tests
+        run: go test -v ./...
