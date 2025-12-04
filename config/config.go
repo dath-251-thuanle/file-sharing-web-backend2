@@ -35,8 +35,8 @@ func NewConfig() *Config {
 		DB: DatabaseConfig{
 			Host:     utils.GetEnv("DB_HOST", "localhost"),
 			Port:     utils.GetEnv("DB_PORT", "5435"),
-			User:     utils.GetEnv("DB_USER", "postgres"),
-			Password: utils.GetEnv("DB_PASSWORD", "postgres"),
+			User:     utils.GetEnv("DB_USER", "haixon"),
+			Password: utils.GetEnv("DB_PASSWORD", "123456"),
 			DBName:   utils.GetEnv("DB_NAME", "file-sharing"),
 			SSLMode:  utils.GetEnv("DB_SSLMODE", "disable"),
 		},
