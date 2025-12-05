@@ -22,6 +22,10 @@ func (fr *FileRoutes) Register(r *gin.RouterGroup) {
 	optional.Use(middleware.AuthMiddlewareUpload())
 	{
 		optional.POST("/upload", fr.handler.UploadFile)
+
+		// Sử đụng share token.
+		optional.GET("/:ident", fr.handler.GetFileInfo)
+		optional.GET("/:ident/download", fr.handler.DownloadFile)
 	}
 	protected := files.Group("/")
 	protected.Use(middleware.AuthMiddleware())
@@ -29,10 +33,10 @@ func (fr *FileRoutes) Register(r *gin.RouterGroup) {
 		protected.GET("/my", fr.handler.GetMyFiles)
 
 		protected.DELETE("/:id", fr.handler.DeleteFile)
-		protected.GET("/:ident", fr.handler.GetFileInfo)
 
-		protected.GET("/:ident/stats", fr.handler.GetFileStats)
-		protected.GET("/:ident/download", fr.handler.DownloadFile)
-		protected.GET("/:ident/download-history", fr.handler.GetFileDownloadHistory)
+		// Sử dụng ID.
+		protected.GET("info/:ident", fr.handler.GetFileInfoVerbose)
+		protected.GET("/stats/:ident", fr.handler.GetFileStats)
+		protected.GET("/download-history/:ident", fr.handler.GetFileDownloadHistory)
 	}
 }

@@ -58,8 +58,8 @@ func (r *sharedRepository) ShareFileWithUsers(ctx context.Context, fileID string
 	}
 
 	query := fmt.Sprintf(`
-		INSERT INTO shared (user_id, file_id) 
-		VALUES %s 
+		INSERT INTO shared (user_id, file_id)
+		VALUES %s
 		ON CONFLICT (user_id, file_id) DO NOTHING
 	`, strings.Join(queryValues, ", "))
 

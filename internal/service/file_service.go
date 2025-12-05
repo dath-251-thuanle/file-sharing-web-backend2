@@ -149,10 +149,12 @@ func (s *fileService) UploadFile(ctx context.Context, fileHeader *multipart.File
 	// 5. Xử lý SharedWith
 	if req.SharedWith != nil && *req.SharedWith != "" {
 		var emails []string
-		if err := json.Unmarshal([]byte(*req.SharedWith), &emails); err == nil {
-			if err := s.sharedRepo.ShareFileWithUsers(ctx, savedFile.Id, emails); err != nil {
-				return nil, err
-			}
+		if err := json.Unmarshal([]byte(*req.SharedWith), &emails); err != nil {
+			return nil, utils.ResponseMsg(utils.ErrCodeBadRequest, "Invalid shared with list")
+		}
+
+		if err := s.sharedRepo.ShareFileWithUsers(ctx, savedFile.Id, emails); err != nil {
+			return nil, err
 		}
 	}
 
@@ -250,6 +252,14 @@ func (s *fileService) getFileInfo(ctx context.Context, id string, userID string,
 
 	if err.IsErr() {
 		return nil, nil, nil, err
+	}
+
+	if userID == "" {
+		if file.IsPublic {
+			return file, nil, nil, nil
+		}
+
+		return nil, nil, nil, utils.Response(utils.ErrCodeGetForbidden)
 	}
 
 	now := time.Now()

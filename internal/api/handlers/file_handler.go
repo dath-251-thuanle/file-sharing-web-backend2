@@ -131,7 +131,44 @@ func (fh *FileHandler) GetFileInfo(ctx *gin.Context) {
 	ident := ctx.Param("ident")
 	userID, exists := ctx.Get("userID")
 	if !exists {
-		userID = nil
+		userID = ""
+	}
+
+	var file *domain.File = nil
+	var err *utils.ReturnStatus = nil
+
+	if uuid.Validate(ident) == nil {
+		file, _, _, err = fh.file_service.GetFileInfoID(ctx, ident, userID.(string))
+	} else {
+		file, _, _, err = fh.file_service.GetFileInfo(ctx, ident, userID.(string))
+	}
+
+	if err != nil {
+		err.Export(ctx)
+		return
+	}
+
+	out := gin.H{
+		"id":          file.Id,
+		"fileName":    file.FileName,
+		"shareToken":  file.ShareToken,
+		"status":      file.Status,
+		"isPublic":    file.IsPublic,
+		"hasPassword": file.HasPassword,
+	}
+
+	//utils.ResponseSuccess(ctx, http.StatusOK, "File retrieved successfully", gin.H{"file": result})
+	ctx.JSON(http.StatusOK, gin.H{
+		"file": out,
+	})
+}
+
+func (fh *FileHandler) GetFileInfoVerbose(ctx *gin.Context) {
+	ident := ctx.Param("ident")
+	userID, exists := ctx.Get("userID")
+	if !exists {
+		utils.Response(utils.ErrCodeGetForbidden).Export(ctx)
+		return
 	}
 
 	var file *domain.File = nil
@@ -143,6 +180,16 @@ func (fh *FileHandler) GetFileInfo(ctx *gin.Context) {
 		file, owner, shared, err = fh.file_service.GetFileInfoID(ctx, ident, userID.(string))
 	} else {
 		file, owner, shared, err = fh.file_service.GetFileInfo(ctx, ident, userID.(string))
+	}
+
+	if owner == nil {
+		utils.Response(utils.ErrCodeGetForbidden).Export(ctx)
+		return
+	}
+
+	if owner.Id != userID {
+		utils.Response(utils.ErrCodeGetForbidden).Export(ctx)
+		return
 	}
 
 	if err != nil {
