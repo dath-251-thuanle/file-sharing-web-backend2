@@ -3,6 +3,8 @@ package test
 import (
 	"log"
 	"os"
+	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/dath-251-thuanle/file-sharing-web-backend2/config"
@@ -22,6 +24,17 @@ func TestMain(m *testing.M) {
 	os.Setenv("DB_SSLMODE", "disable")
 	os.Setenv("JWT_SECRET_KEY", "TEST_SECRET_123")
 
+	_, file, _, _ := runtime.Caller(0)
+	root := filepath.Dir(filepath.Dir(file))
+
+	initPath := filepath.Join(
+		root,
+		"internal",
+		"infrastructure",
+		"database",
+		"init.sql",
+	)
+
 	cfg := config.NewConfig()
 	TestApp = app.NewApplication(cfg)
 
@@ -31,21 +44,18 @@ func TestMain(m *testing.M) {
 
 	sqlDB := TestApp.DB()
 
-	_, err := sqlDB.Exec(`CREATE EXTENSION IF NOT EXISTS "uuid-ossp";`)
-	if err != nil {
+	if _, err := sqlDB.Exec(`CREATE EXTENSION IF NOT EXISTS "uuid-ossp";`); err != nil {
 		log.Fatal("Failed to enable uuid-ossp:", err)
 	}
 
-	initSQL, err := os.ReadFile("init.sql")
+	initSQL, err := os.ReadFile(initPath)
 	if err != nil {
 		log.Fatal("Failed to read init.sql:", err)
 	}
 
-	_, err = sqlDB.Exec(string(initSQL))
-	if err != nil {
+	if _, err = sqlDB.Exec(string(initSQL)); err != nil {
 		log.Fatal("Migration failed:", err)
 	}
 
-	code := m.Run()
-	os.Exit(code)
+	os.Exit(m.Run())
 }
