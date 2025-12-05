@@ -5,9 +5,11 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+
 jobs:
   run-ci-testing:
     runs-on: self-hosted
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -15,19 +17,18 @@ jobs:
       - name: Check Go
         run: go version
 
-      - name: Create .env from secrets
-        shell: powershell
+      - name: Load AGE private key
         run: |
-          "@
-          SERVER_PORT=${{ secrets.SERVER_PORT }}
-          DB_HOST=${{ secrets.DB_HOST }}
-          DB_PORT=${{ secrets.DB_PORT }}
-          DB_NAME=${{ secrets.DB_NAME }}
-          DB_USER=${{ secrets.DB_USER }}
-          DB_PASSWORD=${{ secrets.DB_PASSWORD }}
-          DB_SSLMODE=${{ secrets.DB_SSLMODE }}
-          JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }}
-          "@ | Out-File -FilePath .env -Encoding utf8
+          echo "${{ secrets.SOPS_AGE_KEY }}" > age.key
+          chmod 600 age.key
+        env:
+          SOPS_AGE_KEY_FILE: age.key
+
+      - name: Decrypt .env
+        run: |
+          sops --decrypt --input-type dotenv --output-type dotenv --output .env dev.enc
+        env:
+          SOPS_AGE_KEY_FILE: age.key
 
       - name: Start containers
         run: docker compose up -d
