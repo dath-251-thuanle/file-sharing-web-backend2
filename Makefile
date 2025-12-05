@@ -8,5 +8,3 @@ build:
 	go build -o bin/myapp.exe ./cmd/server
 run-binary:
 	./bin/myapp.exe
-
-docker exec -i postgres-db psql -U haixon -d file-sharing < init.sql
