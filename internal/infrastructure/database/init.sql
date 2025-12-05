@@ -69,6 +69,8 @@ CREATE TABLE IF NOT EXISTS usersLoginSession (
     cid UUID NOT NULL
 );
 
+DROP PROCEDURE IF EXISTS proc_download(UUID, UUID);
+
 CREATE PROCEDURE proc_download(f_id UUID, u_id UUID)
 LANGUAGE SQL
 AS $$
