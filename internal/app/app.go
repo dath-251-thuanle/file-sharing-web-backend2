@@ -23,10 +23,19 @@ type Application struct {
 	config  *config.Config
 	router  *gin.Engine
 	modules []Module
+	db      *sql.DB
 }
 
 type ModuleContext struct {
 	DB *sql.DB
+}
+
+func (a *Application) Router() *gin.Engine {
+	return a.router
+}
+
+func (a *Application) DB() *sql.DB {
+	return a.db
 }
 
 func NewApplication(cfg *config.Config) *Application {
@@ -79,6 +88,7 @@ func NewApplication(cfg *config.Config) *Application {
 		config:  cfg,
 		router:  r,
 		modules: modules,
+		db:      database.DB,
 	}
 }
 
