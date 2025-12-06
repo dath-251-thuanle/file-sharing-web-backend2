@@ -37,7 +37,7 @@ func NewFileRepository(db *sql.DB) FileRepository {
 
 func (r *fileRepository) CreateFile(ctx context.Context, file *domain.File) (*domain.File, *utils.ReturnStatus) {
 	// 1. Xử lý giá trị NULL cho cột UUID và Password
-	var userID interface{}
+	var userID any
 	if file.OwnerId != nil {
 		userID = *file.OwnerId
 	} else {
@@ -45,7 +45,7 @@ func (r *fileRepository) CreateFile(ctx context.Context, file *domain.File) (*do
 	}
 
 	// Cột 'password' trong DB cho phép NULL
-	var passwordHash interface{}
+	var passwordHash any
 	if file.PasswordHash != nil {
 		passwordHash = *file.PasswordHash
 	} else {
@@ -54,8 +54,8 @@ func (r *fileRepository) CreateFile(ctx context.Context, file *domain.File) (*do
 
 	query := `
 		INSERT INTO files (
-			id, user_id, name, type, size, password, 
-			available_from, available_to, enable_totp, 
+			id, user_id, name, type, size, password,
+			available_from, available_to, enable_totp,
 			share_token, created_at, is_public
 		) VALUES (
 			$1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12
@@ -89,8 +89,8 @@ func (r *fileRepository) CreateFile(ctx context.Context, file *domain.File) (*do
 
 func (r *fileRepository) GetFileByID(ctx context.Context, id string) (*domain.File, *utils.ReturnStatus) {
 	query := `
-		SELECT 
-			id, user_id, name, type, size, share_token, 
+		SELECT
+			id, user_id, name, type, size, share_token,
 			password, available_from, available_to, enable_totp, created_at, is_public
 		FROM files
 		WHERE id = $1
@@ -144,9 +144,9 @@ func (r *fileRepository) GetFileByID(ctx context.Context, id string) (*domain.Fi
 
 func (r *fileRepository) GetFileByToken(ctx context.Context, token string) (*domain.File, *utils.ReturnStatus) {
 	query := `
-		SELECT 
-			id, user_id, name, type, size, share_token, 
-			password, available_from, available_to, enable_totp, 
+		SELECT
+			id, user_id, name, type, size, share_token,
+			password, available_from, available_to, enable_totp,
 			created_at, is_public
 		FROM files
 		WHERE share_token = $1
@@ -199,7 +199,7 @@ func (r *fileRepository) GetFileByToken(ctx context.Context, token string) (*dom
 
 func (r *fileRepository) DeleteFile(ctx context.Context, id string, userID string) *utils.ReturnStatus {
 	query := `
-        DELETE FROM files 
+        DELETE FROM files
         WHERE id = $1 AND user_id = $2
     `
 
@@ -223,33 +223,31 @@ func (r *fileRepository) DeleteFile(ctx context.Context, id string, userID strin
 func (r *fileRepository) GetMyFiles(ctx context.Context, userID string, params domain.ListFileParams) ([]domain.File, *utils.ReturnStatus) {
 	// 1. Khởi tạo truy vấn cơ bản
 	baseQuery := `
-		SELECT 
-			id, user_id, name, type, size, share_token, 
+		SELECT
+			id, user_id, name, type, size, share_token,
 			available_from, available_to, enable_totp, created_at, is_public
 		FROM files
 		WHERE user_id = $1
 	`
-	args := []interface{}{userID}
+	args := []any{userID}
 	query := baseQuery
 	argCounter := 2
 
-	// 2. Thêm điều kiện lọc Status (giữ nguyên, vì không có cột status trong DB)
 	if strings.ToLower(params.Status) != "all" {
-		// LƯU Ý: Đây là logic lọc trạng thái (Status) trong truy vấn SQL chính.
 		status := strings.ToLower(params.Status)
 
-		// Tăng bộ đếm tham số
 		argCounter++
 
-		// Bổ sung điều kiện WHERE dựa trên Status
-		if status == "active" {
-			query += fmt.Sprintf(" AND available_from <= NOW() AND available_to > NOW()")
-		} else if status == "pending" {
-			query += fmt.Sprintf(" AND available_from > NOW()")
-		} else if status == "expired" {
-			query += fmt.Sprintf(" AND available_to <= NOW()")
+		switch status {
+		case "active":
+			query += " AND available_from <= NOW() AND available_to > NOW()"
+		case "pending":
+			query += " AND available_from > NOW()"
+		case "expired":
+			query += " AND available_to <= NOW()"
+		default:
+			return nil, utils.ResponseMsg(utils.ErrCodeInternal, "Invalid file status.")
 		}
-		// Nếu status không khớp, truy vấn sẽ không thay đổi, chỉ lọc user_id.
 	}
 
 	// 3. Thêm sắp xếp
@@ -266,7 +264,7 @@ func (r *fileRepository) GetMyFiles(ctx context.Context, userID string, params d
 
 	// 4. Thêm phân trang (Pagination)
 	offset := (params.Page - 1) * params.Limit
-	query += fmt.Sprintf(" LIMIT $2 OFFSET $3")
+	query += " LIMIT $2 OFFSET $3"
 	args = append(args, int64(params.Limit), int64(offset))
 
 	// 5. Thực thi truy vấn
@@ -327,9 +325,9 @@ func (r *fileRepository) GetFileSummary(ctx context.Context, userID string) (*do
 	summary := &domain.FileSummary{}
 
 	activeQuery := `
-        SELECT COUNT(id) FROM files 
-        WHERE user_id = $1 
-          AND available_from <= NOW() 
+        SELECT COUNT(id) FROM files
+        WHERE user_id = $1
+          AND available_from <= NOW()
           AND available_to > NOW()
     `
 	err := r.db.QueryRowContext(ctx, activeQuery, userID).Scan(&summary.ActiveFiles) // Chỉ truyền $1
@@ -338,8 +336,8 @@ func (r *fileRepository) GetFileSummary(ctx context.Context, userID string) (*do
 	}
 
 	pendingQuery := `
-        SELECT COUNT(id) FROM files 
-        WHERE user_id = $1 
+        SELECT COUNT(id) FROM files
+        WHERE user_id = $1
           AND available_from > NOW()
     `
 	err = r.db.QueryRowContext(ctx, pendingQuery, userID).Scan(&summary.PendingFiles) // Chỉ truyền $1
@@ -349,8 +347,8 @@ func (r *fileRepository) GetFileSummary(ctx context.Context, userID string) (*do
 
 	// 3. Tính Expired Files (Đã hết hiệu lực: NOW >= available_to)
 	expiredQuery := `
-        SELECT COUNT(id) FROM files 
-        WHERE user_id = $1 
+        SELECT COUNT(id) FROM files
+        WHERE user_id = $1
           AND available_to <= NOW()
     `
 	err = r.db.QueryRowContext(ctx, expiredQuery, userID).Scan(&summary.ExpiredFiles) // Chỉ truyền $1
@@ -363,8 +361,8 @@ func (r *fileRepository) GetFileSummary(ctx context.Context, userID string) (*do
 
 func (r *fileRepository) FindAll(ctx context.Context) ([]domain.File, *utils.ReturnStatus) {
 	query := `
-        SELECT 
-            id, user_id, name, type, size, share_token, 
+        SELECT
+            id, user_id, name, type, size, share_token,
             password, available_from, available_to, enable_totp, created_at, is_public
         FROM files
         ORDER BY created_at DESC
@@ -477,13 +475,13 @@ func (r *fileRepository) GetFileDownloadHistory(ctx context.Context, fileID stri
 
 func (r *fileRepository) GetFileStats(ctx context.Context, fileID string) (*domain.FileStat, *utils.ReturnStatus) {
 	query := `
-        SELECT 
-            f.id, 
-            f.user_id, 
-            f.name, 
-            COALESCE(s.download_count, 0), 
-            COALESCE(s.user_download_count, 0), 
-            f.created_at, 
+        SELECT
+            f.id,
+            f.user_id,
+            f.name,
+            COALESCE(s.download_count, 0),
+            COALESCE(s.user_download_count, 0),
+            f.created_at,
             MAX(d.time)
         FROM files f
         LEFT JOIN filestat s ON f.id = s.file_id

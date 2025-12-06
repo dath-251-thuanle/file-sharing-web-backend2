@@ -29,34 +29,94 @@ func (s *adminService) GetSystemPolicy(ctx context.Context) (*config.SystemPolic
 	return s.cfg.Policy, nil
 }
 
-func (s *adminService) UpdateSystemPolicy(ctx context.Context, updates map[string]any) (*config.SystemPolicy, *utils.ReturnStatus) {
-	// Kiểm tra tính hợp lệ của DefaultValidityDays so với MaxValidityDays (cần convert sang int)
-	if maxDaysVal, ok := updates["max_validity_days"]; ok {
-		if defaultDaysVal, ok := updates["default_validity_days"]; ok {
-			maxDays := maxDaysVal.(int)
-			defaultDays := defaultDaysVal.(int)
+func toInt(value any) (int, bool) {
+	if value == nil {
+		return 0, false
+	}
+	switch v := value.(type) {
+	case float64:
+		return int(v), true
+	case int:
+		return v, true
+	case int64:
+		return int(v), true
+	default:
+		return 0, false
+	}
+}
 
-			if defaultDays > maxDays {
-				return nil, utils.ResponseMsg(utils.ErrCodeBadRequest, "Default validity days cannot be greater than max validity days")
+func (s *adminService) UpdateSystemPolicy(ctx context.Context, updates map[string]any) (*config.SystemPolicy, *utils.ReturnStatus) {
+
+	currentPolicy := *s.cfg.Policy
+
+	// 1. MaxFileSizeMB
+	if val, exists := updates[utils.CamelToSnake("MaxFileSizeMB")]; exists {
+		if v, ok := toInt(val); ok {
+			if v <= 0 {
+				return nil, utils.ResponseMsg(utils.ErrCodeBadRequest, "Max file size must be > 0")
 			}
+			if v > 10240 {
+				return nil, utils.ResponseMsg(utils.ErrCodeBadRequest, "Max file size cannot exceed 10GB (10240 MB)")
+			}
+			currentPolicy.MaxFileSizeMB = v
 		}
 	}
 
-	if maxFileSizeVal, exists := updates[utils.CamelToSnake("MaxFileSizeMB")]; exists {
-		s.cfg.Policy.MaxFileSizeMB = maxFileSizeVal.(int)
+	// 2. MinValidityHours
+	if val, exists := updates[utils.CamelToSnake("MinValidityHours")]; exists {
+		if v, ok := toInt(val); ok {
+			if v < 0 {
+				return nil, utils.ResponseMsg(utils.ErrCodeBadRequest, "Min validity hours cannot be negative")
+			}
+			if v > 8760 {
+				return nil, utils.ResponseMsg(utils.ErrCodeBadRequest, "Min validity hours cannot exceed 1 year")
+			}
+			currentPolicy.MinValidityHours = v
+		}
 	}
-	if minValidityHoursVal, exists := updates[utils.CamelToSnake("MinValidityHours")]; exists {
-		s.cfg.Policy.MinValidityHours = minValidityHoursVal.(int)
+
+	// 3. MaxValidityDays
+	if val, exists := updates[utils.CamelToSnake("MaxValidityDays")]; exists {
+		if v, ok := toInt(val); ok {
+			if v <= 0 {
+				return nil, utils.ResponseMsg(utils.ErrCodeBadRequest, "Max validity days must be > 0")
+			}
+			if v > 3650 {
+				return nil, utils.ResponseMsg(utils.ErrCodeBadRequest, "Max validity days cannot exceed 10 years")
+			}
+			currentPolicy.MaxValidityDays = v
+		}
 	}
-	if maxValidityDaysVal, exists := updates[utils.CamelToSnake("MaxValidityDays")]; exists {
-		s.cfg.Policy.MaxValidityDays = maxValidityDaysVal.(int)
+
+	// 4. DefaultValidityDays
+	if val, exists := updates[utils.CamelToSnake("DefaultValidityDays")]; exists {
+		if v, ok := toInt(val); ok {
+			if v <= 0 {
+				return nil, utils.ResponseMsg(utils.ErrCodeBadRequest, "Default validity days must be > 0")
+			}
+			currentPolicy.DefaultValidityDays = v
+		}
 	}
-	if defaultValidityDaysVal, exists := updates[utils.CamelToSnake("DefaultValidityDays")]; exists {
-		s.cfg.Policy.DefaultValidityDays = defaultValidityDaysVal.(int)
+
+	// 5. RequirePasswordMinLength
+	if val, exists := updates[utils.CamelToSnake("RequirePasswordMinLength")]; exists {
+		if v, ok := toInt(val); ok {
+			if v < 0 {
+				return nil, utils.ResponseMsg(utils.ErrCodeBadRequest, "Password length cannot be negative")
+			}
+			if v > 128 { // Ví dụ: Mật khẩu quá dài không cần thiết
+				return nil, utils.ResponseMsg(utils.ErrCodeBadRequest, "Password min length cannot exceed 128 characters")
+			}
+			currentPolicy.RequirePasswordMinLength = v
+		}
 	}
-	if requirePasswordMinLengthVal, exists := updates[utils.CamelToSnake("RequirePasswordMinLength")]; exists {
-		s.cfg.Policy.RequirePasswordMinLength = requirePasswordMinLengthVal.(int)
+
+	if currentPolicy.DefaultValidityDays > currentPolicy.MaxValidityDays {
+		return nil, utils.ResponseMsg(utils.ErrCodeBadRequest, "Default validity days cannot be greater than max validity days")
 	}
+
+	*s.cfg.Policy = currentPolicy
+
 	return s.cfg.Policy, nil
 }
 

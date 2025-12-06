@@ -34,8 +34,8 @@ type FileService interface {
 	UploadFile(ctx context.Context, fileHeader *multipart.FileHeader, req *dto.UploadRequest, ownerID *string) (*domain.File, *utils.ReturnStatus)
 	GetMyFiles(ctx context.Context, userID string, params domain.ListFileParams) (interface{}, *utils.ReturnStatus)
 	DeleteFile(ctx context.Context, fileID string, userID string) *utils.ReturnStatus
-	GetFileInfo(ctx context.Context, token string, userID string) (*domain.File, *domain.User, []string, *utils.ReturnStatus)
-	GetFileInfoID(ctx context.Context, token string, userID string) (*domain.File, *domain.User, []string, *utils.ReturnStatus)
+	GetFileInfo(ctx context.Context, token string, userID string, verbose bool) (*domain.File, *domain.User, []string, *utils.ReturnStatus)
+	GetFileInfoID(ctx context.Context, token string, userID string, verbose bool) (*domain.File, *domain.User, []string, *utils.ReturnStatus)
 	DownloadFile(ctx context.Context, token string, userID string, password string) (*domain.File, []byte, *utils.ReturnStatus)
 	GetFileDownloadHistory(ctx context.Context, fileID string, userID string, pagenum, limit int) (*domain.FileDownloadHistory, *utils.ReturnStatus)
 	GetFileStats(ctx context.Context, fileID string, userID string) (*domain.FileStat, *utils.ReturnStatus)

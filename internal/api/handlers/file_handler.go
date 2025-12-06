@@ -40,12 +40,27 @@ func (fh *FileHandler) UploadFile(ctx *gin.Context) {
 		return
 	}
 
+	if req.Password != nil {
+		if len(*req.Password) < 6 {
+			utils.ResponseMsg(utils.ErrCodeBadRequest, "Password must be at least 6 characters long").Export(ctx)
+			return
+		}
+	}
+
 	var userID *string
 	if val, exists := ctx.Get("userID"); exists && val != "" {
 		strVal := val.(string)
 		userID = &strVal
 	} else {
 		userID = nil
+	}
+
+	if userID == nil && !req.IsPublic {
+		ctx.JSON(http.StatusUnauthorized, gin.H{
+			"error":   "Unauthorized",
+			"message": "Bearer token is required for authenticated uploads",
+		})
+		return
 	}
 
 	uploadedFile, berr := fh.file_service.UploadFile(ctx, fileHeader, &req, userID)
@@ -138,9 +153,9 @@ func (fh *FileHandler) GetFileInfo(ctx *gin.Context) {
 	var err *utils.ReturnStatus = nil
 
 	if uuid.Validate(ident) == nil {
-		file, _, _, err = fh.file_service.GetFileInfoID(ctx, ident, userID.(string))
+		file, _, _, err = fh.file_service.GetFileInfoID(ctx, ident, userID.(string), false)
 	} else {
-		file, _, _, err = fh.file_service.GetFileInfo(ctx, ident, userID.(string))
+		file, _, _, err = fh.file_service.GetFileInfo(ctx, ident, userID.(string), false)
 	}
 
 	if err != nil {
@@ -177,17 +192,12 @@ func (fh *FileHandler) GetFileInfoVerbose(ctx *gin.Context) {
 	shared := []string{}
 
 	if uuid.Validate(ident) == nil {
-		file, owner, shared, err = fh.file_service.GetFileInfoID(ctx, ident, userID.(string))
+		file, owner, shared, err = fh.file_service.GetFileInfoID(ctx, ident, userID.(string), true)
 	} else {
-		file, owner, shared, err = fh.file_service.GetFileInfo(ctx, ident, userID.(string))
+		file, owner, shared, err = fh.file_service.GetFileInfo(ctx, ident, userID.(string), true)
 	}
 
 	if owner == nil {
-		utils.Response(utils.ErrCodeGetForbidden).Export(ctx)
-		return
-	}
-
-	if owner.Id != userID {
 		utils.Response(utils.ErrCodeGetForbidden).Export(ctx)
 		return
 	}
@@ -216,13 +226,11 @@ func (fh *FileHandler) GetFileInfoVerbose(ctx *gin.Context) {
 		"createdAt": file.CreatedAt,
 	}
 
-	if owner != nil {
-		out["owner"] = gin.H{
-			"id":       owner.Id,
-			"username": owner.Username,
-			"email":    owner.Email,
-			"role":     owner.Role,
-		}
+	out["owner"] = gin.H{
+		"id":       owner.Id,
+		"username": owner.Username,
+		"email":    owner.Email,
+		"role":     owner.Role,
 	}
 
 	if shared != nil {

@@ -241,7 +241,7 @@ func (s *fileService) DeleteFile(ctx context.Context, fileID string, userID stri
 	return nil
 }
 
-func (s *fileService) getFileInfo(ctx context.Context, id string, userID string, isToken bool) (*domain.File, *domain.User, []string, *utils.ReturnStatus) {
+func (s *fileService) getFileInfo(ctx context.Context, id string, userID string, isToken bool, verbose bool) (*domain.File, *domain.User, []string, *utils.ReturnStatus) {
 	var file *domain.File = nil
 	var err *utils.ReturnStatus = nil
 	if isToken {
@@ -278,8 +278,10 @@ func (s *fileService) getFileInfo(ctx context.Context, id string, userID string,
 	isAdmin := requester.Role == "admin"
 	owner_ := domain.User{}
 	var owner *domain.User = nil
-	if s.userRepo.FindById(*file.OwnerId, &owner_) == nil {
-		owner = &owner_
+	if file.OwnerId != nil {
+		if s.userRepo.FindById(*file.OwnerId, &owner_) == nil {
+			owner = &owner_
+		}
 	}
 
 	shareds, err := s.sharedRepo.GetUsersSharedWith(ctx, file.Id)
@@ -287,6 +289,10 @@ func (s *fileService) getFileInfo(ctx context.Context, id string, userID string,
 		return nil, nil, nil, err
 	}
 	if !isAdmin {
+		if verbose && *file.OwnerId != userID {
+			return nil, nil, nil, utils.Response(utils.ErrCodeGetForbidden)
+		}
+
 		if !file.IsPublic && *file.OwnerId != userID {
 			if !slices.Contains(shareds.UserIds, userID) {
 				return nil, nil, nil, utils.Response(utils.ErrCodeGetForbidden)
@@ -325,16 +331,16 @@ func (s *fileService) getFileInfo(ctx context.Context, id string, userID string,
 	return file, owner, outShared, nil
 }
 
-func (s *fileService) GetFileInfo(ctx context.Context, token string, userID string) (*domain.File, *domain.User, []string, *utils.ReturnStatus) {
-	return s.getFileInfo(ctx, token, userID, true)
+func (s *fileService) GetFileInfo(ctx context.Context, token string, userID string, verbose bool) (*domain.File, *domain.User, []string, *utils.ReturnStatus) {
+	return s.getFileInfo(ctx, token, userID, true, verbose)
 }
 
-func (s *fileService) GetFileInfoID(ctx context.Context, id string, userID string) (*domain.File, *domain.User, []string, *utils.ReturnStatus) {
-	return s.getFileInfo(ctx, id, userID, false)
+func (s *fileService) GetFileInfoID(ctx context.Context, id string, userID string, verbose bool) (*domain.File, *domain.User, []string, *utils.ReturnStatus) {
+	return s.getFileInfo(ctx, id, userID, false, verbose)
 }
 
 func (s *fileService) DownloadFile(ctx context.Context, token string, userID string, password string) (*domain.File, []byte, *utils.ReturnStatus) {
-	fileInfo, _, _, err := s.getFileInfo(ctx, token, userID, true)
+	fileInfo, _, _, err := s.getFileInfo(ctx, token, userID, true, false)
 
 	if err.IsErr() {
 		return nil, nil, err
