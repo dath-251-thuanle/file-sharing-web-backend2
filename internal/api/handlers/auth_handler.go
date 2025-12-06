@@ -59,7 +59,6 @@ func (ah *AuthHandler) Login(ctx *gin.Context) {
 	if user.EnableTOTP {
 		ctx.JSON(http.StatusOK, gin.H{
 			"requireTOTP": user.EnableTOTP,
-			"id":          user.Id,
 			"cid":         token,
 			"message":     "TOTP verification required",
 		})
@@ -206,8 +205,8 @@ func (ah *AuthHandler) LoginTOTP(ctx *gin.Context) {
 		utils.ResponseValidator(ctx, validation.HandleValidationErrors(err))
 		return
 	}
-
-	user, accessToken, err := ah.auth_service.LoginTOTP(input.ID, input.TOTPCode)
+	
+	user, accessToken, err := ah.auth_service.LoginTOTP(input.CID, input.TOTPCode)
 	if err != nil {
 		err.Export(ctx)
 		return

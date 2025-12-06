@@ -54,91 +54,90 @@ Tạo tài khoản người dùng mới (không bắt buộc để upload file).
 
 ```json
 {
-  "username": "nam123",
-  "email": "nam@example.com",
-  "password": "passwordtest"
+    "username": "nam123",
+    "email": "<nam@example.com>",
+    "password": "123456"
 }
 ```
+| Field        | Type    | Required | Description                             |
+| :------------| :-------| :--------| :---------------------------------------|
+| `username`   | string  | yes      | Tên người dùng (unique)                 |
+| `email`      | string  | yes      | Email (unique)                          |
+| `password`   | string  | yes      | Mật khẩu (tối thiểu 6 ký tự)            |
 
-<h3 id="post__auth_register-parameters">Parameters</h3>
-
-|Name|In|Type|Required|Description|
-|---|---|---|---|---|
-|body|body|[RegisterRequest](#schemaregisterrequest)|true|none|
-
-> Example responses
-
-> Đăng ký thành công
-
+**Response (200 OK)**
 ```json
 {
-  "message": "User registered successfully",
-  "userId": "550e8400-e29b-41d4-a716-446655440000"
+    "message": "User registered successfully",
+    "userId": "550e8400-e29b-41d4-a716-446655440000"
 }
 ```
-
-> Thiếu hoặc sai định dạng trường bắt buộc
-
-```json
-{
-  "error": "Validation error",
-  "message": "Email is required"
-}
-```
-
-```json
-{
-  "error": "Validation error",
-  "message": "Email format is invalid"
-}
-```
-
-> Email hoặc username đã tồn tại
-
-```json
-{
-  "error": "Conflict",
-  "message": "Email already exists"
-}
-```
-
-```json
-{
-  "error": "Conflict",
-  "message": "Username already exists"
-}
-```
-
-<h3 id="post__auth_register-responses">Responses</h3>
-
-|Status|Meaning|Description|Schema|
-|---|---|---|---|
-|200|[OK](https://tools.ietf.org/html/rfc7231#section-6.3.1)|Đăng ký thành công|[RegisterResponse](#schemaregisterresponse)|
-|400|[Bad Request](https://tools.ietf.org/html/rfc7231#section-6.5.1)|Thiếu hoặc sai định dạng trường bắt buộc|[Error](#schemaerror)|
-|409|[Conflict](https://tools.ietf.org/html/rfc7231#section-6.5.8)|Email hoặc username đã tồn tại|[Error](#schemaerror)|
-
-<aside class="success">
-This operation does not require authentication
-</aside>
-
-## post__auth_login
-
-`POST /auth/login`
-
-*Đăng nhập*
+## `POST /api/auth/login`
 
 Đăng nhập để lấy JWT token.
 
-**Luồng xử lý:**
-1. Nếu user chưa bật TOTP: trả về accessToken ngay
-2. Nếu user đã bật TOTP (totpEnabled=true): trả về `requireTOTP: true`, client cần gọi `/auth/login/totp` để hoàn tất đăng nhập
+**Request Body**
+```json
+{
+    "email": "<nam@example.com>",
+    "password": "123456"
+}
+```
+**Response (200 OK - không bật TOTP)**
+```json
+{
+    "accessToken": "eyJhbGciOi...",
+    "user": {
+        "id": "550e8400-e29b-41d4-a716-446655440000",
+        "username": "nam123",
+        "email": "<nam@example.com>"
+    }
+}
+```
+**Response (200 OK - có TOTP)**
+```json
+{
+    "cid": "431ba686-c69d....",
+    "message": "TOTP verification required",
+    "requireTOTP": true
+}
+```
+## `POST /api/auth/login/totp`
 
 > Body parameter
 
 ```json
 {
-  "email": "nam@example.com",
-  "password": "Passw0rd"
+    "cid": "a3c34041-7e57e5...",
+    "code": "123456"
+}
+```
+**Response (200 OK)**
+```json
+{
+    "accessToken": "eyJhbGciOi...",
+    "user": {
+        "id": "550e8400-e29b-41d4-a716-446655440000",
+        "username": "nam123",
+        "email": "<nam@example.com>"
+    }
+}
+```
+## `POST /api/auth/totp/setup`
+
+Bật hoặc reset TOTP.
+
+**Headers**
+- Authorization: Bearer `<token>`
+
+**Response (200 OK)**
+```json
+{
+    "message": "TOTP secret generated",
+    "totpSetup": {
+        "secret": "NB2W45DFOIZA====",
+        "qrCode": "data:image/png;base64,..."
+    }
 }
 ```
 

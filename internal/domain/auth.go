@@ -6,7 +6,7 @@ type LoginInput struct {
 }
 
 type LoginTOTPInput struct {
-	ID       string `json:"id" binding:"required"`
+	CID       string `json:"cid" binding:"required"`
 	TOTPCode string `json:"code" binding:"required"`
 }
 

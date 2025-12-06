@@ -22,7 +22,7 @@ func (ur *authRepository) Create(user *domain.User) (*domain.User, *utils.Return
 	err := row.Scan(&user.Id)
 	fmt.Println("Created user with ID:", user.Id)
 	if err != nil {
-		return nil, utils.ResponseMsg(utils.ErrCodeDatabaseError, fmt.Sprintf("failed to create user: %w", err))
+		return nil, utils.ResponseMsg(utils.ErrCodeDatabaseError, fmt.Sprintf("failed to create user: %v", err))
 	}
 
 	return user, nil
