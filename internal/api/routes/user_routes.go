@@ -19,6 +19,6 @@ func (ur *UserRoutes) Register(r *gin.RouterGroup) {
 	users := r.Group("/user")
 	{
 		users.GET("/:id", ur.handler.GetUserById)
-		users.GET("", ur.handler.GetUserByEmail)
+		users.GET("", ur.handler.GetUserById)
 	}
 }

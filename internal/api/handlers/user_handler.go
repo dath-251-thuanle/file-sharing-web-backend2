@@ -19,10 +19,14 @@ func NewUserHandler(user_service service.UserService) *UserHandler {
 }
 
 func (uh *UserHandler) GetUserById(ctx *gin.Context) {
-	id := ctx.Param("id")
+	userID, exists := ctx.Get("userID")
+	if !exists {
+		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "User not found in context"})
+		return
+	}
 
-	var user domain.User
-	createdUser, err := uh.user_service.GetUserById(id)
+	var user domain.UserResponse
+	createdUser, err := uh.user_service.GetUserById(userID.(string))
 	if err != nil {
 		err.Export(ctx)
 		return

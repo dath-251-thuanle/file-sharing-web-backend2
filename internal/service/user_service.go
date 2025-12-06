@@ -16,13 +16,20 @@ func NewUserService(repo repository.UserRepository) UserService {
 	}
 }
 
-func (us *userService) GetUserById(id string) (*domain.User, *utils.ReturnStatus) {
+func (us *userService) GetUserById(id string) (*domain.UserResponse, *utils.ReturnStatus) {
 	user := &domain.User{}
 	err := us.userRepo.FindById(id, user)
 	if err != nil {
 		return nil, err
 	}
-	return user, nil
+	resp := &domain.UserResponse{
+		Id:         user.Id,
+		Username:   user.Username,
+		Email:      user.Email,
+		Role:       user.Role,
+		EnableTOTP: user.EnableTOTP,
+	}
+	return resp, nil
 }
 
 func (us *userService) GetUserByEmail(email string) (*domain.UserResponse, *utils.ReturnStatus) {
