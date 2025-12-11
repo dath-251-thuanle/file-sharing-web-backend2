@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
 	"log"
@@ -147,13 +146,8 @@ func (s *fileService) UploadFile(ctx context.Context, fileHeader *multipart.File
 	}
 
 	// 5. Xử lý SharedWith
-	if req.SharedWith != nil && *req.SharedWith != "" {
-		var emails []string
-		if err := json.Unmarshal([]byte(*req.SharedWith), &emails); err != nil {
-			return nil, utils.ResponseMsg(utils.ErrCodeBadRequest, "Invalid shared with list")
-		}
-
-		if err := s.sharedRepo.ShareFileWithUsers(ctx, savedFile.Id, emails); err != nil {
+	if req.SharedWith != nil {
+		if err := s.sharedRepo.ShareFileWithUsers(ctx, savedFile.Id, req.SharedWith); err != nil {
 			return nil, err
 		}
 	}

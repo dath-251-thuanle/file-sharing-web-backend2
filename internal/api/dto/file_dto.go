@@ -19,7 +19,7 @@ type UploadRequest struct {
 	AvailableTo   *time.Time `form:"availableTo" time_format:"2006-01-02T15:04:05Z"`
 
 	// Dữ liệu JSON array được gửi dưới dạng string trong form-data
-	SharedWith *string `form:"sharedWith"`
+	SharedWith []string `form:"sharedWith"`
 
 	EnableTOTP bool `form:"enableTOTP"`
 }
