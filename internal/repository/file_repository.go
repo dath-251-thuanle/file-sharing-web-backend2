@@ -528,7 +528,9 @@ func (r *fileRepository) GetAllAccessibleFiles(ctx context.Context, userIDop *st
 		WHERE
 			(f.is_public OR $1 = s.user_id)
 		AND (NOW() >= f.available_from AND NOW() < f.available_to)
-		OR $1 = f.user_id;
+		OR $1 = f.user_id
+		OR EXISTS (SELECT * FROM users WHERE id = $1 AND role = 'admin')
+		;
 	`
 
 	queryNull := `
