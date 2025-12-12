@@ -362,7 +362,15 @@ GET /files/my?status=all&page=1&limit=20&sortBy=createdAt&order=desc
 Authorization: Bearer <token>
 # Response
 {
-  "files": [...],
+  "files": [
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440001",
+      "fileName": "document.pdf",
+      "shareToken": "a1b2c3d4e5f6g7h8",
+      "status": "active",
+      "createdAt": "2025-11-19T10:00:00Z"
+    }
+  ],
   "pagination": { "currentPage": 1, "totalPages": 3, "totalFiles": 42 },
   "summary": { "activeFiles": 28, "pendingFiles": 5, "expiredFiles": 9 }
 }

@@ -187,10 +187,11 @@ func (s *fileService) GetMyFiles(ctx context.Context, userID string, params doma
 
 	for _, f := range files {
 		out = append(out, gin.H{
-			"id":        f.Id,
-			"fileName":  f.FileName,
-			"status":    f.Status,
-			"createdAt": f.CreatedAt,
+			"id":         f.Id,
+			"fileName":   f.FileName,
+			"shareToken": f.ShareToken,
+			"status":     f.Status,
+			"createdAt":  f.CreatedAt,
 		})
 	}
 
