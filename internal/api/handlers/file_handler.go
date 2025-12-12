@@ -30,7 +30,7 @@ func (fh *FileHandler) UploadFile(ctx *gin.Context) {
 
 	fileHeader, err := ctx.FormFile("file")
 	if err != nil {
-		utils.ResponseMsg(utils.ErrCodeUploadBadRequest, "File is required").Export(ctx)
+		utils.Response(utils.ErrCodeFileUploadRequired).Export(ctx)
 		return
 	}
 
@@ -74,6 +74,7 @@ func (fh *FileHandler) UploadFile(ctx *gin.Context) {
 		"id":         uploadedFile.Id,
 		"fileName":   uploadedFile.FileName,
 		"shareToken": uploadedFile.ShareToken,
+		"isPublic":   uploadedFile.IsPublic,
 	}
 
 	//utils.ResponseSuccess(ctx, http.StatusCreated, "File uploaded successfully", gin.H{"file": response})
@@ -94,7 +95,7 @@ func (fh *FileHandler) DeleteFile(ctx *gin.Context) {
 
 	userID, exists := ctx.Get("userID")
 	if !exists {
-		utils.Response(utils.ErrCodeUnauthorized).Export(ctx)
+		utils.Response(utils.ErrCodeBearerInvalid).Export(ctx)
 		return
 	}
 
@@ -114,7 +115,7 @@ func (fh *FileHandler) DeleteFile(ctx *gin.Context) {
 func (fh *FileHandler) GetMyFiles(ctx *gin.Context) {
 	userID, exists := ctx.Get("userID")
 	if !exists {
-		utils.ResponseError(ctx, utils.NewError("Unauthorized access", utils.ErrCodeUnauthorized))
+		utils.Response(utils.ErrCodeBearerInvalid).Export(ctx)
 		return
 	}
 
@@ -144,7 +145,7 @@ func (fh *FileHandler) GetMyFiles(ctx *gin.Context) {
 }
 
 func (fh *FileHandler) GetFileInfo(ctx *gin.Context) {
-	ident := ctx.Param("ident")
+	ident := ctx.Param("shareToken")
 	userID, exists := ctx.Get("userID")
 	if !exists {
 		userID = ""
@@ -182,10 +183,10 @@ func (fh *FileHandler) GetFileInfo(ctx *gin.Context) {
 }
 
 func (fh *FileHandler) GetFileInfoVerbose(ctx *gin.Context) {
-	ident := ctx.Param("ident")
+	ident := ctx.Param("id")
 	userID, exists := ctx.Get("userID")
 	if !exists {
-		utils.Response(utils.ErrCodeGetForbidden).Export(ctx)
+		utils.Response(utils.ErrCodeBearerInvalid).Export(ctx)
 		return
 	}
 
@@ -200,14 +201,21 @@ func (fh *FileHandler) GetFileInfoVerbose(ctx *gin.Context) {
 		file, owner, shared, err = fh.file_service.GetFileInfo(ctx, ident, userID.(string), true)
 	}
 
-	if owner == nil {
-		utils.Response(utils.ErrCodeGetForbidden).Export(ctx)
-		return
-	}
-
 	if err != nil {
 		err.Export(ctx)
 		return
+	}
+
+	if owner.Role != "admin" {
+		if owner == nil {
+			utils.Response(utils.ErrCodeGetForbidden).Export(ctx)
+			return
+		}
+
+		if owner.Id != userID {
+			utils.Response(utils.ErrCodeGetForbidden).Export(ctx)
+			return
+		}
 	}
 
 	out := gin.H{
@@ -247,7 +255,7 @@ func (fh *FileHandler) GetFileInfoVerbose(ctx *gin.Context) {
 }
 
 func (fh *FileHandler) DownloadFile(ctx *gin.Context) {
-	fileToken := ctx.Param("ident")
+	fileToken := ctx.Param("shareToken")
 	password := ctx.Query("password")
 	userID, exists := ctx.Get("userID")
 	if !exists {
@@ -270,7 +278,7 @@ func (fh *FileHandler) DownloadFile(ctx *gin.Context) {
 }
 
 func (fh *FileHandler) PreviewFile(ctx *gin.Context) {
-	fileToken := ctx.Param("ident")
+	fileToken := ctx.Param("shareToken")
 	password := ctx.Query("password")
 	userID, exists := ctx.Get("userID")
 	if !exists {
@@ -296,10 +304,11 @@ func (fh *FileHandler) PreviewFile(ctx *gin.Context) {
 }
 
 func (fh *FileHandler) GetFileDownloadHistory(ctx *gin.Context) {
-	fileID := ctx.Param("ident")
+	fileID := ctx.Param("id")
 	userID, exists := ctx.Get("userID")
 	if !exists {
-		userID = nil
+		utils.Response(utils.ErrCodeBearerInvalid).Export(ctx)
+		return
 	}
 
 	page := utils.GetIntQuery(ctx, "page", 1)
@@ -319,11 +328,12 @@ func (fh *FileHandler) GetFileDownloadHistory(ctx *gin.Context) {
 }
 
 func (fh *FileHandler) GetFileStats(ctx *gin.Context) {
-	fileID := ctx.Param("ident")
+	fileID := ctx.Param("id")
 	userID, exists := ctx.Get("userID")
 
 	if !exists {
-		userID = nil
+		utils.Response(utils.ErrCodeBearerInvalid).Export(ctx)
+		return
 	}
 
 	if uuid.Validate(fileID) != nil {

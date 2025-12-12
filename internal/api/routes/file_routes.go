@@ -23,10 +23,9 @@ func (fr *FileRoutes) Register(r *gin.RouterGroup) {
 	{
 		optional.POST("/upload", fr.handler.UploadFile)
 
-		// Sử đụng share token.
-		optional.GET("/:ident", fr.handler.GetFileInfo)
+		optional.GET("/:shareToken", fr.handler.GetFileInfo)
 
-		optional.GET("/:ident/download", fr.handler.DownloadFile)
+		optional.GET("/:shareToken/download", fr.handler.DownloadFile)
 
 		optional.GET("/available", fr.handler.GetAllAccessibleFiles)
 	}
@@ -35,14 +34,12 @@ func (fr *FileRoutes) Register(r *gin.RouterGroup) {
 	{
 		protected.GET("/my", fr.handler.GetMyFiles)
 
-		protected.DELETE("/:id", fr.handler.DeleteFile)
-
-		// Sử dụng shareToken.
-		optional.GET("/:ident/preview", fr.handler.PreviewFile)
+		optional.GET("/:shareToken/preview", fr.handler.PreviewFile)
 
 		// Sử dụng ID.
-		protected.GET("info/:ident", fr.handler.GetFileInfoVerbose)
-		protected.GET("/stats/:ident", fr.handler.GetFileStats)
-		protected.GET("/download-history/:ident", fr.handler.GetFileDownloadHistory)
+		protected.DELETE("/info/:id", fr.handler.DeleteFile)
+		protected.GET("info/:id", fr.handler.GetFileInfoVerbose)
+		protected.GET("/stats/:id", fr.handler.GetFileStats)
+		protected.GET("/download-history/:id", fr.handler.GetFileDownloadHistory)
 	}
 }

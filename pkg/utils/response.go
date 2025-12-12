@@ -17,6 +17,8 @@ const (
 	ErrCodeUnauthorized    ErrorCode = "UNAUTHORIZED"
 	ErrCodeTooManyRequests ErrorCode = "TOO_MANY_REQUESTS"
 
+	ErrCodeFileUploadRequired ErrorCode = "File is required"
+
 	ErrCodeUserNotFound ErrorCode = "User does not exist or invalid id/email"
 	ErrCodeLoginInvalid ErrorCode = "Invalid email or password"
 
@@ -111,6 +113,12 @@ func (bee *ReturnStatus) Export(c *gin.Context) {
 	// 	}
 	// 	maps.Copy(out, args)
 	// 	c.JSON(http.StatusCreated, out)
+	case ErrCodeFileUploadRequired:
+		c.JSON(400, gin.H{
+			"error":   "Validation error",
+			"message": "File is required",
+		})
+
 	case ErrCodeLoginInvalid:
 		c.JSON(401, gin.H{
 			"error":   "Unauthorized",

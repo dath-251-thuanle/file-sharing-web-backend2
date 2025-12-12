@@ -1117,6 +1117,28 @@ paths:
                     error: File expired
                     message: File has expired
 
+        "423":
+          description: File chưa đến thời gian hiệu lực
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  availableFrom:
+                    type: string
+                    format: date-time
+                  hoursUntilAvailable:
+                    type: number
+              examples:
+                pending:
+                  summary: File chưa đến giờ
+                  value:
+                    error: File not yet available
+                    availableFrom: "2025-11-20T10:00:00Z"
+                    hoursUntilAvailable: 6
+
   /files/{shareToken}/download:
     get:
       tags:
