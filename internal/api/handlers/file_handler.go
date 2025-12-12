@@ -171,6 +171,8 @@ func (fh *FileHandler) GetFileInfo(ctx *gin.Context) {
 		"status":      file.Status,
 		"isPublic":    file.IsPublic,
 		"hasPassword": file.HasPassword,
+		"fileSize":    file.FileSize,
+		"mimeType":    file.MimeType,
 	}
 
 	//utils.ResponseSuccess(ctx, http.StatusOK, "File retrieved successfully", gin.H{"file": result})

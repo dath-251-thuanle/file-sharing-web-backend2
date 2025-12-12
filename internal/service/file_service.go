@@ -250,11 +250,7 @@ func (s *fileService) getFileInfo(ctx context.Context, id string, userID string,
 	}
 
 	if userID == "" {
-		if file.IsPublic {
-			return file, nil, nil, nil
-		}
-
-		return nil, nil, nil, utils.Response(utils.ErrCodeGetForbidden)
+		return file, nil, nil, nil
 	}
 
 	now := time.Now()
