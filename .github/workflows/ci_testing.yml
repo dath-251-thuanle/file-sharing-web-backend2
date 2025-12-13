@@ -16,9 +16,6 @@ jobs:
       - name: Check Go
         run: go version
 
-      - name: Prepare CI env
-        run: cp example.env .env
-
       - name: Cleanup old containers & volumes
         run: docker compose down -v
 
