@@ -151,7 +151,7 @@ func (bee *ReturnStatus) Export(c *gin.Context) {
 		})
 
 	case ErrCodeGetForbidden:
-		c.JSON(401, gin.H{
+		c.JSON(403, gin.H{
 			"error":   "Forbidden",
 			"message": "You do not have permission to access this file",
 		})
@@ -235,7 +235,6 @@ func (bee *ReturnStatus) Export(c *gin.Context) {
 			"error":   "Forbidden",
 			"message": "You don't have permission to access this resource",
 		})
-
 	case ErrCodeInvalidMaxMinValidDays:
 		c.JSON(401, gin.H{
 			"error":   "Validation error",

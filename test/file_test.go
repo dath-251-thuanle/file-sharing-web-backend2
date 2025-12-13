@@ -244,7 +244,7 @@ func TestDelete_Operations(t *testing.T) {
 	// Anonymous
 	t.Run("Anonymous Delete Fail", func(t *testing.T) {
 		fileId, _ := uploadFileForTest(t, "", "", "", "", nil)
-		req, _ := http.NewRequest("DELETE", "/api/files/"+fileId, nil)
+		req, _ := http.NewRequest("DELETE", "/api/files/info/"+fileId, nil)
 		rec := httptest.NewRecorder()
 		TestApp.Router().ServeHTTP(rec, req)
 		assert.Contains(t, []int{401}, rec.Code)
@@ -255,7 +255,7 @@ func TestDelete_Operations(t *testing.T) {
 		token, _ := setupUserAndToken(t)
 		fileId, _ := uploadFileForTest(t, token, "", "", "", nil)
 
-		req, _ := http.NewRequest("DELETE", "/api/files/"+fileId, nil)
+		req, _ := http.NewRequest("DELETE", "/api/files/info/"+fileId, nil)
 		req.Header.Set("Authorization", "Bearer "+token)
 		rec := httptest.NewRecorder()
 		TestApp.Router().ServeHTTP(rec, req)
@@ -268,7 +268,7 @@ func TestDelete_Operations(t *testing.T) {
 		attackerToken, _ := setupUserAndToken(t)
 		fileId, _ := uploadFileForTest(t, ownerToken, "", "", "", nil)
 
-		req, _ := http.NewRequest("DELETE", "/api/files/"+fileId, nil)
+		req, _ := http.NewRequest("DELETE", "/api/files/info/"+fileId, nil)
 		req.Header.Set("Authorization", "Bearer "+attackerToken)
 		rec := httptest.NewRecorder()
 		TestApp.Router().ServeHTTP(rec, req)
@@ -292,4 +292,76 @@ func TestMyFiles_List(t *testing.T) {
 	assert.NotNil(t, resp["files"])
 	files := resp["files"].([]interface{})
 	assert.GreaterOrEqual(t, len(files), 2)
+}
+func TestGetInfo_Operations(t *testing.T) {
+	// 1. Owner get info
+	t.Run("Owner Get Info Success", func(t *testing.T) {
+		token, _ := setupUserAndToken(t)
+		fileId, _ := uploadFileForTest(t, token, "", "", "", nil)
+
+		req, _ := http.NewRequest("GET", "/api/files/info/"+fileId, nil)
+		req.Header.Set("Authorization", "Bearer "+token)
+
+		rec := httptest.NewRecorder()
+		TestApp.Router().ServeHTTP(rec, req)
+
+		assert.Equal(t, 200, rec.Code)
+		resp := ParseJSON(t, rec)
+
+		data := resp["file"].(map[string]interface{})
+		assert.Equal(t, fileId, data["id"])
+	})
+
+	// 2. Other user get info (Private file)
+	t.Run("Other User Get Info Private Fail", func(t *testing.T) {
+		ownerToken, _ := setupUserAndToken(t)
+		attackerToken, _ := setupUserAndToken(t)
+		fileId, _ := uploadFileForTest(t, ownerToken, "", "", "", nil) // Default is private if token exists
+
+		req, _ := http.NewRequest("GET", "/api/files/info/"+fileId, nil)
+		req.Header.Set("Authorization", "Bearer "+attackerToken)
+
+		rec := httptest.NewRecorder()
+		TestApp.Router().ServeHTTP(rec, req)
+
+		assert.Equal(t, 403, rec.Code)
+	})
+
+	// 3. Not found
+	t.Run("File Not Found", func(t *testing.T) {
+		token, _ := setupUserAndToken(t)
+		req, _ := http.NewRequest("GET", "/api/files/info/non-existent-id", nil)
+		req.Header.Set("Authorization", "Bearer "+token)
+
+		rec := httptest.NewRecorder()
+		TestApp.Router().ServeHTTP(rec, req)
+
+		assert.Equal(t, 404, rec.Code)
+	})
+}
+
+func TestPublic_Info_By_ShareToken(t *testing.T) {
+
+	token, _ := setupUserAndToken(t)
+	_, shareToken := uploadFileForTest(t, token, "", "", "", nil)
+
+	t.Run("Get Public Info via ShareToken", func(t *testing.T) {
+		req, _ := http.NewRequest("GET", "/api/files/public/"+shareToken, nil)
+
+		rec := httptest.NewRecorder()
+		TestApp.Router().ServeHTTP(rec, req)
+
+		if rec.Code != 404 {
+			assert.Equal(t, 200, rec.Code)
+			resp := ParseJSON(t, rec)
+
+			var data map[string]interface{}
+			if d, ok := resp["data"].(map[string]interface{}); ok {
+				data = d
+			} else {
+				data = resp
+			}
+			assert.NotEmpty(t, data["filename"])
+		}
+	})
 }
