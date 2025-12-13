@@ -18,7 +18,7 @@ jobs:
       - name: Decrypt .env
         run: |
           echo "Decrypting..."
-          sops --decrypt --input-type json --output-type dotenv --output .env prod.enc
+          sops --decrypt --input-type dotenv --output-type dotenv --output .env dev.enc
         env:
           SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
 
