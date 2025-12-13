@@ -1,183 +1,182 @@
-# HỆ THỐNG CHIA SẺ FILE THÔNG QUA WEB (file-sharing-web-backend)
-## Mục lục
-[1. Tổng quan dự án](#tổng-quan-dự-án)
+# 📁 File Sharing Web Backend
 
-[2. Danh sách thành viên](#danh-sách-thành-viên)
+Hệ thống chia sẻ file tạm thời qua web, được xây dựng bằng **Golang** với framework **Gin** và database **PostgreSQL**.
 
-[3. Cấu trúc thư mục](#cấu-trúc-thư-mục)
+## 📋 Mục lục
+- [Tính năng](#-tính-năng)
+- [Tech Stack](#-tech-stack)
+- [Cấu trúc dự án](#-cấu-trúc-dự-án)
+- [Cài đặt và Chạy](#-cài-đặt-và-chạy)
+- [API Documentation](#-api-documentation)
+- [Makefile Commands](#-makefile-commands)
+- [Thành viên nhóm](#-thành-viên-nhóm)
+- [Report đồ án](#-report-đồ-án)
 
-[4. Yêu cầu hệ thống](#yêu-cầu-hệ-thống)
+---
 
-[5. Hướng dẫn cài đặt](#hướng-dẫn-cài-đặt)
+## ✨ Tính năng
 
-[6. Workflow](#workflow)
+- **Upload & Share**: Upload file và tạo link chia sẻ với share token
+- **Thời gian hiệu lực**: Thiết lập `availableFrom` và `availableTo` cho file
+- **Bảo mật đa lớp**:
+  - Password protection
+  - Whitelist người dùng (sharedWith)
+  - TOTP/2FA cho tài khoản
+- **File preview**: Xem trước file trực tiếp trong browser
+- **Thống kê download**: Theo dõi lịch sử tải về chi tiết
+- **Anonymous upload**: Hỗ trợ upload không cần đăng nhập
 
-## Tổng quan dự án
-Đây là repository chứa mã nguồn **Back-end** cho hệ thống chia sẻ file thông qua web, được xây dựng bằng Golang và sử dụng PostgreSQL.
+---
 
-Tính năng:
-- Người dùng có thể upload các file lên hệ thống và chia sẻ chúng với người khác.
-- Người dùng có thể thiết lập các thuộc tính sau khi chia sẻ file:
-    - Có hiệu lực từ `from` đến `to`.
-    - Có cài đặt mật khẩu (`password`)?
-    - Có cài đặt `TOTP`?
-    - Có thể chia sẻ với danh sách người dùng khác.
+## 🛠 Tech Stack
 
-## Danh sách thành viên
-| MSSV | Họ tên            | Công việc    |
-| ----------:|:-------------------- |:------- |
-| 2311159    | Lê Thanh Huy         | NHÓM A |
-| 2311681    | Nguyễn Đình Khôi     | NHÓM A |
-| 2311659    | Đậu Minh Khôi        | NHÓM A, Class Diagram |
-| 2311888    | Cao Vũ Hoàng Long    | NHÓM B |
-| 2311906    | Nguyễn Hoàng Long    | NHÓM B |
-| 2312955    | Đặng Hải Sơn         | NHÓM B, Use Case diagram  |
+| Component | Technology |
+|-----------|------------|
+| **Language** | Go 1.25+ |
+| **Framework** | Gin |
+| **Database** | PostgreSQL 17 |
+| **Authentication** | JWT |
+| **2FA** | TOTP (Google Authenticator) |
+| **Storage** | Local filesystem |
+| **Container** | Docker & Docker Compose |
 
-***NHÓM A: DATABASE DESIGN, API (Admin, System Management, File Management)**
+---
 
-***NHÓM B: API (Authentication, User Management, Statistics & Analytics)**
+## 📂 Cấu trúc dự án
 
-## Cấu trúc thư mục
+```
+file-sharing-web-backend/
+├── cmd/server/           # Entry point
+│   └── main.go
+├── config/               # Configuration
+├── docs/                 # Documentation
+│   ├── API_docs.md
+│   └── openapi.yaml
+├── internal/
+│   ├── api/              # API layer
+│   │   ├── dto/          # Data Transfer Objects
+│   │   ├── handlers/     # Request handlers
+│   │   └── routes/       # Route definitions
+│   ├── app/              # Application modules
+│   ├── domain/           # Domain models
+│   ├── infrastructure/   # External services
+│   │   ├── database/     # DB connection & schema
+│   │   ├── jwt/          # JWT service
+│   │   └── storage/      # File storage
+│   ├── middleware/       # Auth & Admin middleware
+│   ├── repository/       # Data access layer
+│   └── service/          # Business logic
+├── pkg/                  # Shared packages
+│   ├── utils/
+│   └── validation/
+├── test/                 # Tests
+├── docker-compose.yml
+├── Dockerfile
+├── Makefile
+└── go.mod
+```
+
+---
+
+## 🚀 Cài đặt và Chạy
+
+### Yêu cầu
+- Docker & Docker Compose
+- Go 1.25+ (nếu chạy local)
+
+### Sử dụng Docker (Recommended)
 
 ```bash
-/file-sharing
-├── cmd/
-│   └── server/
-│       └── main.go
-├── config/
-│   ├── app.yaml
-│   └── config.go
-├── docs/
-│   ├── API_docs.md
-│   └── README.md
-├── internal/
-│   ├── api/
-│   │   ├── dto/
-│   │   │   ├── admin_dto.go
-│   │   │   ├── auth_dto.go
-│   │   │   ├── file_dto.go
-│   │   │   └── user_dto.go
-│   │   ├── handlers/
-│   │   │   ├── admin_handler.go
-│   │   │   ├── auth_handler.go
-│   │   │   ├── file_handler.go
-│   │   │   └── user_handler.go
-│   │   └── routes/
-│   │       ├── admin_routes.go
-│   │       ├── auth_routes.go
-│   │       └── file_routes.go
-│   │       └── router.go
-│   │       └── user_routes.go
-│   ├── app/
-│   │   ├── admin_module.go
-│   │   ├── app.go
-│   │   ├── auth_module.go
-│   │   ├── file_module.go
-│   │   └── user_module.go
-│   ├── domain/
-│   │   ├── auth.go
-│   │   ├── file_stat.go
-│   │   ├── file.go
-│   │   ├── share_with.go
-│   │   └── user.go
-│   ├── infrastructure/
-│   │   ├── database/
-│   │   │   ├── connection.go
-│   │   │   └── init.sql
-│   │   └── jwt/
-│   │       ├── interface.go
-│   │       └── jwt.go
-│   │   └── storage/
-│   │       ├── localstorage.go
-│   │       └── storage.go
-│   ├── middleware/
-│   │   └── admin_middleware.go
-│   │   └── auth_middleware.go
-│   ├── repository/
-│   │   ├── auth_repository.go
-│   │   ├── file_repository.go
-│   │   ├── interface.go
-│   │   ├── share_repository.go
-│   │   └── user_repository.go
-│   └── service/
-│       ├── admin_service.go
-│       ├── auth_service.go
-│       ├── file_service.go
-│       ├── interface.go
-│       └── user_service.go
-├── pkg/
-│   ├── utils/
-│   │   ├── convert.go
-│   │   ├── helper.go
-│   │   └── random.go
-│   │   └── response.go
-│   └── validation/
-│       ├── custom_validation.go
-│       └── validation.go
-├── test/
-│   ├── auth_test.go
-│   └── file_test.go
-├── .age.key.pub
-├── dev.enc
-├── example.env
-├── Makefile
-├── Dockerfile
-├── docker-compose.yml
-├── go.mod
-├── go.sum
-└── README.md
-```
+# 1. Clone repository
+git clone <repo-url>
+cd file-sharing-web-backend
 
-## Yêu cầu hệ thống
+# 2. Tạo file .env
+cp example.env .env
+# Chỉnh sửa các thông số trong .env
 
-- Cần có: Docker, PostresSQL, Golang (kèm thư viện Gin)
-- Không bắt buộc:
-    - Postman: kiểm thử API.
-
-## Hướng dẫn cài đặt
-
-Tạo file .env tại thư mục gốc:
-```
-cp example.env .env 
-# Điền các thông số cấu hình (DB connection, JWT, v.v.).
-```
-
-Khởi chạy hệ thống bằng Docker:
-```
+# 3. Khởi chạy
 docker compose up -d
+
+# Database tự động được tạo từ init.sql
+# Server chạy tại http://localhost:8080
 ```
 
-Tạo bảng trong PostgreSQL:
-```
-docker exec -i postgres-db psql -U haixon -d file-sharing < internal/infrastructure/database/init.sql
-```
-Chạy server bằng Makefile (tùy chọn):
-```
+### Chạy Local (Development)
+
+```bash
+# 1. Đảm bảo PostgreSQL đang chạy
+docker compose up -d db
+
+# 2. Chạy server
 make server
 ```
 
-Ở đây có thể dùng Postman hoặc curl để kiểm thử các API.
+### Reset Database
 
-## Workflow
-
-**1. Fork repository**
-
-**2. Clone repository**
 ```bash
-git clone <repo-url>
+make docker-reset
 ```
 
-**3. Thêm các thay đổi**
+---
 
-**4. Commit và Push branch của bạn**
+## 📖 API Documentation
+
+Chi tiết về tất cả endpoints có trong:
+- **[API_docs.md](docs/API_docs.md)** - Tài liệu tổng quan
+- **[openapi.yaml](docs/openapi.yaml)** - OpenAPI 3.0 specification
+
+### Quick Overview
+
+| Category | Endpoints |
+|----------|-----------|
+| **Auth** | `POST /auth/register`, `/auth/login`, `/auth/logout`, `/auth/totp/*` |
+| **User** | `GET /user` |
+| **Files** | `POST /files/upload`, `GET /files/my`, `GET /files/available`, `GET /files/{shareToken}/download`, `GET /files/{shareToken}/preview` |
+| **Admin** | `POST /admin/cleanup`, `GET/PATCH /admin/policy` |
+
+### Base URL
+- Development: `http://localhost:8080`
+- Production: `https://api.filesharing-hcmut.com`
+
+---
+
+## 🔧 Makefile Commands
+
 ```bash
-git add .
-git commit -m "Tên commit"
-git push origin <nhánh của bạn>
+make server        # Chạy server development
+make docker-reset  # Reset database (xóa data + khởi động lại)
+make docker-logs   # Xem logs API
+make test          # Chạy tests
+make clean         # Xóa build artifacts
+make deps          # Tải dependencies
 ```
 
-**5. Tạo pull request trên trang Github hoặc github-cli**
+---
+
+## 👥 Thành viên nhóm
+
+| MSSV | Họ tên | Công việc |
+|------|--------|-----------|
+| 2311159 | Lê Thanh Huy | Nhóm A |
+| 2311681 | Nguyễn Đình Khôi | Nhóm A |
+| 2311659 | Đậu Minh Khôi | Nhóm A, Class Diagram |
+| 2311888 | Cao Vũ Hoàng Long | Nhóm B |
+| 2311906 | Nguyễn Hoàng Long | Nhóm B |
+| 2312955 | Đặng Hải Sơn | Nhóm B, Use Case Diagram |
+
+**Nhóm A:** Database Design, API (Admin, System Management, File Management)
+
+**Nhóm B:** API (Authentication, User Management, Statistics & Analytics)
+
+---
 
 ## 📄 Report đồ án
 
 👉 [Xem Report tại đây](report/Report_DACNPM.pdf)
+
+---
+
+## 📝 License
+
+MIT License

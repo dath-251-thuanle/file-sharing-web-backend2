@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"fmt"
+	"io"
 	"net/http"
 	"strings"
 
@@ -41,8 +42,8 @@ func (fh *FileHandler) UploadFile(ctx *gin.Context) {
 	}
 
 	if req.Password != nil {
-		if len(*req.Password) < 6 {
-			utils.ResponseMsg(utils.ErrCodeBadRequest, "Password must be at least 6 characters long").Export(ctx)
+		if len(*req.Password) < 8 {
+			utils.ResponseMsg(utils.ErrCodeBadRequest, "Password must be at least 8 characters long").Export(ctx)
 			return
 		}
 	}
@@ -170,6 +171,8 @@ func (fh *FileHandler) GetFileInfo(ctx *gin.Context) {
 		"status":      file.Status,
 		"isPublic":    file.IsPublic,
 		"hasPassword": file.HasPassword,
+		"fileSize":    file.FileSize,
+		"mimeType":    file.MimeType,
 	}
 
 	//utils.ResponseSuccess(ctx, http.StatusOK, "File retrieved successfully", gin.H{"file": result})
@@ -257,7 +260,39 @@ func (fh *FileHandler) DownloadFile(ctx *gin.Context) {
 		return
 	}
 
-	ctx.Data(http.StatusOK, info.MimeType, file)
+	fileBytes, readerr := io.ReadAll(file)
+	if readerr != nil {
+		utils.ResponseMsg(utils.ErrCodeInternal, readerr.Error()).Export(ctx)
+		return
+	}
+
+	ctx.Data(http.StatusOK, info.MimeType, fileBytes)
+}
+
+func (fh *FileHandler) PreviewFile(ctx *gin.Context) {
+	fileToken := ctx.Param("ident")
+	password := ctx.Query("password")
+	userID, exists := ctx.Get("userID")
+	if !exists {
+		utils.ResponseMsg(utils.ErrCodeGetForbidden, "You do not have permission to view this file").Export(ctx)
+		return
+	}
+
+	info, file, download_err := fh.file_service.DownloadFile(ctx, fileToken, userID.(string), password)
+	if download_err != nil {
+		download_err.Export(ctx)
+		return
+	}
+
+	fileBytes, readerr := io.ReadAll(file)
+	if readerr != nil {
+		utils.ResponseMsg(utils.ErrCodeInternal, readerr.Error()).Export(ctx)
+		return
+	}
+
+	ctx.Header("Content-Disposition", "inline; filename=\""+info.FileName+"\"")
+	ctx.Data(http.StatusOK, info.MimeType, fileBytes)
+	//ctx.DataFromReader(http.StatusOK, int64(len(fileBytes)), info.MimeType, file, extraHeaders)
 }
 
 func (fh *FileHandler) GetFileDownloadHistory(ctx *gin.Context) {

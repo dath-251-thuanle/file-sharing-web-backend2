@@ -205,7 +205,7 @@ func (ah *AuthHandler) LoginTOTP(ctx *gin.Context) {
 		utils.ResponseValidator(ctx, validation.HandleValidationErrors(err))
 		return
 	}
-	
+
 	user, accessToken, err := ah.auth_service.LoginTOTP(input.CID, input.TOTPCode)
 	if err != nil {
 		err.Export(ctx)

@@ -187,10 +187,11 @@ func (s *fileService) GetMyFiles(ctx context.Context, userID string, params doma
 
 	for _, f := range files {
 		out = append(out, gin.H{
-			"id":        f.Id,
-			"fileName":  f.FileName,
-			"status":    f.Status,
-			"createdAt": f.CreatedAt,
+			"id":         f.Id,
+			"fileName":   f.FileName,
+			"shareToken": f.ShareToken,
+			"status":     f.Status,
+			"createdAt":  f.CreatedAt,
 		})
 	}
 
@@ -249,11 +250,7 @@ func (s *fileService) getFileInfo(ctx context.Context, id string, userID string,
 	}
 
 	if userID == "" {
-		if file.IsPublic {
-			return file, nil, nil, nil
-		}
-
-		return nil, nil, nil, utils.Response(utils.ErrCodeGetForbidden)
+		return file, nil, nil, nil
 	}
 
 	now := time.Now()
@@ -333,7 +330,7 @@ func (s *fileService) GetFileInfoID(ctx context.Context, id string, userID strin
 	return s.getFileInfo(ctx, id, userID, false, verbose)
 }
 
-func (s *fileService) DownloadFile(ctx context.Context, token string, userID string, password string) (*domain.File, []byte, *utils.ReturnStatus) {
+func (s *fileService) DownloadFile(ctx context.Context, token string, userID string, password string) (*domain.File, io.Reader, *utils.ReturnStatus) {
 	fileInfo, _, _, err := s.getFileInfo(ctx, token, userID, true, false)
 
 	if err.IsErr() {
@@ -355,16 +352,11 @@ func (s *fileService) DownloadFile(ctx context.Context, token string, userID str
 		return nil, nil, err
 	}
 
-	file, readerr := io.ReadAll(fileReader)
-	if readerr != nil {
-		return nil, nil, utils.ResponseMsg(utils.ErrCodeInternal, readerr.Error())
-	}
-
 	if err := s.fileRepo.RegisterDownload(ctx, fileInfo.Id, userID); err.IsErr() {
 		return nil, nil, err
 	}
 
-	return fileInfo, file, nil
+	return fileInfo, fileReader, nil
 }
 
 func (s *fileService) GetFileDownloadHistory(ctx context.Context, fileID string, userID string, pagenum, limit int) (*domain.FileDownloadHistory, *utils.ReturnStatus) {

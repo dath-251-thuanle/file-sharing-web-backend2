@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"io"
 	"mime/multipart"
 
 	"github.com/dath-251-thuanle/file-sharing-web-backend2/config"
@@ -36,7 +37,7 @@ type FileService interface {
 	DeleteFile(ctx context.Context, fileID string, userID string) *utils.ReturnStatus
 	GetFileInfo(ctx context.Context, token string, userID string, verbose bool) (*domain.File, *domain.User, []string, *utils.ReturnStatus)
 	GetFileInfoID(ctx context.Context, token string, userID string, verbose bool) (*domain.File, *domain.User, []string, *utils.ReturnStatus)
-	DownloadFile(ctx context.Context, token string, userID string, password string) (*domain.File, []byte, *utils.ReturnStatus)
+	DownloadFile(ctx context.Context, token string, userID string, password string) (*domain.File, io.Reader, *utils.ReturnStatus)
 	GetFileDownloadHistory(ctx context.Context, fileID string, userID string, pagenum, limit int) (*domain.FileDownloadHistory, *utils.ReturnStatus)
 	GetFileStats(ctx context.Context, fileID string, userID string) (*domain.FileStat, *utils.ReturnStatus)
 	GetAllAccessibleFiles(ctx context.Context, userID *string) ([]dto.AccessibleFile, *utils.ReturnStatus)
