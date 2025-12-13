@@ -13,7 +13,7 @@ type Route interface {
 
 func RegisterRoutes(r *gin.Engine, authService jwt.TokenService, authRepo repository.AuthRepository, routes ...Route) {
 
-	api := r.Group("/")
+	api := r.Group("/api")
 
 	middleware.InitAuthMiddleware(authService, authRepo)
 
@@ -34,10 +34,13 @@ func RegisterRoutes(r *gin.Engine, authService jwt.TokenService, authRepo reposi
 		}
 	}
 
-	r.GET("/", func(c *gin.Context) {
-        c.JSON(200, gin.H{
-            "message": "File Sharing API is running successfully.",
-            "status":  "online",
-        })
-    })
+	home := func(c *gin.Context) {
+		c.JSON(200, gin.H{
+			"message": "Welcome to File Sharing API",
+			"status":  "online",
+		})
+	}
+
+	r.GET("/", home)
+	r.GET("/api", home)
 }
