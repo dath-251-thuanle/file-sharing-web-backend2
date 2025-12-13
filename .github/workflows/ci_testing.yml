@@ -23,8 +23,9 @@ jobs:
         run: docker compose up -d db
 
       - name: Wait for DB
+        shell: bash
         run: |
-          until docker compose exec -T db pg_isready -U $DB_USER -d $DB_NAME; do
+          until docker compose exec -T db pg_isready -U "$DB_USER" -d "$DB_NAME"; do
             sleep 2
           done
 
