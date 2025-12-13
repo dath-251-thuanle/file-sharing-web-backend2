@@ -11,26 +11,31 @@ import (
 
 var TestApp *app.Application
 
+func setEnvIfEmpty(key, value string) {
+	if os.Getenv(key) == "" {
+		os.Setenv(key, value)
+	}
+}
+
 func TestMain(m *testing.M) {
 
-	// ==== ENV for TEST ====
-	os.Setenv("SERVER_PORT", "9999")
-	os.Setenv("DB_HOST", "localhost")
-	os.Setenv("DB_PORT", "5435")
-	os.Setenv("DB_NAME", "file-sharing")
-	os.Setenv("DB_USER", "haixon")
-	os.Setenv("DB_PASSWORD", "123456")
-	os.Setenv("DB_SSLMODE", "disable")
-	os.Setenv("JWT_SECRET_KEY", "TEST_SECRET_123")
+	// ===== FIX ENV FOR TESTING =====
+	setEnvIfEmpty("SERVER_PORT", "9999")
+	setEnvIfEmpty("DB_NAME", "testdb")
+	setEnvIfEmpty("DB_USER", "ci")
+	setEnvIfEmpty("DB_PASSWORD", "ci")
+	setEnvIfEmpty("DB_HOST", "localhost")
+	setEnvIfEmpty("DB_PORT", "5435")
+	setEnvIfEmpty("DB_SSLMODE", "disable")
+	setEnvIfEmpty("JWT_SECRET_KEY", "ci_secret")
 
 	cfg := config.NewConfig()
 
 	TestApp = app.NewApplication(cfg)
-
 	if TestApp == nil {
 		log.Fatal("Cannot initialize Application")
 	}
 
-	code := m.Run()
-	os.Exit(code)
+	exitCode := m.Run()
+	os.Exit(exitCode)
 }

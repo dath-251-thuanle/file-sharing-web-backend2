@@ -29,7 +29,7 @@ func TestRegister(t *testing.T) {
 		"password": "%s"
 	}`, testUsername, testEmail, testPassword)
 
-	req := httptest.NewRequest("POST", "/api/auth/register", bytes.NewBufferString(body))
+	req := httptest.NewRequest("POST", "/auth/register", bytes.NewBufferString(body))
 	req.Header.Set("Content-Type", "application/json")
 
 	rec := httptest.NewRecorder()
@@ -51,7 +51,7 @@ func TestLogin_NoTOTP(t *testing.T) {
 		"password": "%s"
 	}`, testEmail, testPassword)
 
-	req := httptest.NewRequest("POST", "/api/auth/login", bytes.NewBufferString(body))
+	req := httptest.NewRequest("POST", "/auth/login", bytes.NewBufferString(body))
 	req.Header.Set("Content-Type", "application/json")
 
 	rec := httptest.NewRecorder()
@@ -70,7 +70,7 @@ func TestLogin_NoTOTP(t *testing.T) {
 // ---------------------------
 func TestSetupTOTP(t *testing.T) {
 
-	req := httptest.NewRequest("POST", "/api/auth/totp/setup", nil)
+	req := httptest.NewRequest("POST", "/auth/totp/setup", nil)
 	req.Header.Set("Authorization", "Bearer "+authToken)
 
 	rec := httptest.NewRecorder()
@@ -108,7 +108,7 @@ func TestLogin_RequireTOTP(t *testing.T) {
 		"password": "%s"
 	}`, testEmail, testPassword)
 
-	req := httptest.NewRequest("POST", "/api/auth/login", bytes.NewBufferString(body))
+	req := httptest.NewRequest("POST", "/auth/login", bytes.NewBufferString(body))
 	req.Header.Set("Content-Type", "application/json")
 
 	rec := httptest.NewRecorder()
@@ -130,7 +130,7 @@ func TestLogin_RequireTOTP(t *testing.T) {
 // ---------------------------
 func TestGetProfile(t *testing.T) {
 
-	req := httptest.NewRequest("GET", "/api/user", nil)
+	req := httptest.NewRequest("GET", "/user", nil)
 	req.Header.Set("Authorization", "Bearer "+authToken)
 
 	rec := httptest.NewRecorder()
@@ -144,7 +144,7 @@ func TestGetProfile(t *testing.T) {
 // ---------------------------
 func TestLogout(t *testing.T) {
 
-	req := httptest.NewRequest("POST", "/api/auth/logout", nil)
+	req := httptest.NewRequest("POST", "/auth/logout", nil)
 	req.Header.Set("Authorization", "Bearer "+authToken)
 
 	rec := httptest.NewRecorder()

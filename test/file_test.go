@@ -26,7 +26,7 @@ func setupUserAndToken(t *testing.T) (string, string) {
 
 	// 1. Register
 	regBody := fmt.Sprintf(`{"username": "%s", "email": "%s", "password": "%s"}`, username, email, password)
-	reqReg, _ := http.NewRequest("POST", "/api/auth/register", bytes.NewBufferString(regBody))
+	reqReg, _ := http.NewRequest("POST", "/auth/register", bytes.NewBufferString(regBody))
 	reqReg.Header.Set("Content-Type", "application/json")
 
 	recReg := httptest.NewRecorder()
@@ -38,7 +38,7 @@ func setupUserAndToken(t *testing.T) (string, string) {
 
 	// 2. Login
 	loginBody := fmt.Sprintf(`{"email": "%s", "password": "%s"}`, email, password)
-	reqLogin, _ := http.NewRequest("POST", "/api/auth/login", bytes.NewBufferString(loginBody))
+	reqLogin, _ := http.NewRequest("POST", "/auth/login", bytes.NewBufferString(loginBody))
 	reqLogin.Header.Set("Content-Type", "application/json")
 
 	recLogin := httptest.NewRecorder()
@@ -96,7 +96,7 @@ func uploadFileForTest(t *testing.T, token string, password string, availableFro
 
 	writer.Close()
 
-	req, _ := http.NewRequest("POST", "/api/files/upload", &buf)
+	req, _ := http.NewRequest("POST", "/files/upload", &buf)
 	req.Header.Set("Content-Type", writer.FormDataContentType())
 	if token != "" {
 		req.Header.Set("Authorization", "Bearer "+token)
@@ -148,7 +148,7 @@ func TestUpload_Scenarios(t *testing.T) {
 		var buf bytes.Buffer
 		writer := multipart.NewWriter(&buf)
 		writer.Close()
-		req, _ := http.NewRequest("POST", "/api/files/upload", &buf)
+		req, _ := http.NewRequest("POST", "/files/upload", &buf)
 		req.Header.Set("Content-Type", writer.FormDataContentType())
 		rec := httptest.NewRecorder()
 		TestApp.Router().ServeHTTP(rec, req)
@@ -160,7 +160,7 @@ func TestDownload_PublicFile(t *testing.T) {
 	token, _ := setupUserAndToken(t)
 	_, shareToken := uploadFileForTest(t, "", "", "", "", nil) // Anonymous file
 
-	req, _ := http.NewRequest("GET", "/api/files/"+shareToken+"/download", nil)
+	req, _ := http.NewRequest("GET", "/files/"+shareToken+"/download", nil)
 	req.Header.Set("Authorization", "Bearer "+token)
 
 	rec := httptest.NewRecorder()
@@ -175,7 +175,7 @@ func TestDownload_PasswordProtected(t *testing.T) {
 
 	// Wrong password
 	t.Run("Wrong Password", func(t *testing.T) {
-		req, _ := http.NewRequest("GET", "/api/files/"+shareToken+"/download?password=wrong", nil)
+		req, _ := http.NewRequest("GET", "/files/"+shareToken+"/download?password=wrong", nil)
 		req.Header.Set("Authorization", "Bearer "+token)
 		rec := httptest.NewRecorder()
 		TestApp.Router().ServeHTTP(rec, req)
@@ -184,7 +184,7 @@ func TestDownload_PasswordProtected(t *testing.T) {
 
 	// Correct password
 	t.Run("Correct Password", func(t *testing.T) {
-		req, _ := http.NewRequest("GET", "/api/files/"+shareToken+"/download?password="+pass, nil)
+		req, _ := http.NewRequest("GET", "/files/"+shareToken+"/download?password="+pass, nil)
 		req.Header.Set("Authorization", "Bearer "+token)
 		rec := httptest.NewRecorder()
 		TestApp.Router().ServeHTTP(rec, req)
@@ -203,7 +203,7 @@ func TestDownload_TimeRestricted(t *testing.T) {
 		future := time.Now().Add(24 * time.Hour).UTC().Format(time.RFC3339)
 		_, shareToken := uploadFileForTest(t, ownerToken, "", future, "", sharedWidth)
 
-		req, _ := http.NewRequest("GET", "/api/files/"+shareToken+"/download", nil)
+		req, _ := http.NewRequest("GET", "/files/"+shareToken+"/download", nil)
 		req.Header.Set("Authorization", "Bearer "+downloaderToken)
 
 		rec := httptest.NewRecorder()
@@ -217,7 +217,7 @@ func TestDownload_TimeRestricted(t *testing.T) {
 		pastTo := time.Now().Add(-24 * time.Hour).UTC().Format(time.RFC3339)
 		_, shareToken := uploadFileForTest(t, ownerToken, "", pastFrom, pastTo, sharedWidth)
 
-		req, _ := http.NewRequest("GET", "/api/files/"+shareToken+"/download", nil)
+		req, _ := http.NewRequest("GET", "/files/"+shareToken+"/download", nil)
 		req.Header.Set("Authorization", "Bearer "+downloaderToken)
 
 		rec := httptest.NewRecorder()
@@ -230,7 +230,7 @@ func TestDownload_TimeRestricted(t *testing.T) {
 		future := time.Now().Add(24 * time.Hour).UTC().Format(time.RFC3339)
 		_, shareToken := uploadFileForTest(t, ownerToken, "", future, "", nil)
 
-		req, _ := http.NewRequest("GET", "/api/files/"+shareToken+"/download", nil)
+		req, _ := http.NewRequest("GET", "/files/"+shareToken+"/download", nil)
 		req.Header.Set("Authorization", "Bearer "+ownerToken) // Owner Token
 
 		rec := httptest.NewRecorder()
@@ -243,7 +243,7 @@ func TestDelete_Operations(t *testing.T) {
 	// Anonymous
 	t.Run("Anonymous Delete Fail", func(t *testing.T) {
 		fileId, _ := uploadFileForTest(t, "", "", "", "", nil)
-		req, _ := http.NewRequest("DELETE", "/api/files/info/"+fileId, nil)
+		req, _ := http.NewRequest("DELETE", "/files/info/"+fileId, nil)
 		rec := httptest.NewRecorder()
 		TestApp.Router().ServeHTTP(rec, req)
 		assert.Contains(t, []int{401}, rec.Code)
@@ -254,7 +254,7 @@ func TestDelete_Operations(t *testing.T) {
 		token, _ := setupUserAndToken(t)
 		fileId, _ := uploadFileForTest(t, token, "", "", "", nil)
 
-		req, _ := http.NewRequest("DELETE", "/api/files/info/"+fileId, nil)
+		req, _ := http.NewRequest("DELETE", "/files/info/"+fileId, nil)
 		req.Header.Set("Authorization", "Bearer "+token)
 		rec := httptest.NewRecorder()
 		TestApp.Router().ServeHTTP(rec, req)
@@ -267,7 +267,7 @@ func TestDelete_Operations(t *testing.T) {
 		attackerToken, _ := setupUserAndToken(t)
 		fileId, _ := uploadFileForTest(t, ownerToken, "", "", "", nil)
 
-		req, _ := http.NewRequest("DELETE", "/api/files/info/"+fileId, nil)
+		req, _ := http.NewRequest("DELETE", "/files/info/"+fileId, nil)
 		req.Header.Set("Authorization", "Bearer "+attackerToken)
 		rec := httptest.NewRecorder()
 		TestApp.Router().ServeHTTP(rec, req)
@@ -280,7 +280,7 @@ func TestMyFiles_List(t *testing.T) {
 	uploadFileForTest(t, token, "", "", "", nil)
 	uploadFileForTest(t, token, "", "", "", nil)
 
-	req, _ := http.NewRequest("GET", "/api/files/my?page=1&limit=10", nil)
+	req, _ := http.NewRequest("GET", "/files/my?page=1&limit=10", nil)
 	req.Header.Set("Authorization", "Bearer "+token)
 
 	rec := httptest.NewRecorder()
@@ -298,7 +298,7 @@ func TestGetInfo_Operations(t *testing.T) {
 		token, _ := setupUserAndToken(t)
 		fileId, _ := uploadFileForTest(t, token, "", "", "", nil)
 
-		req, _ := http.NewRequest("GET", "/api/files/info/"+fileId, nil)
+		req, _ := http.NewRequest("GET", "/files/info/"+fileId, nil)
 		req.Header.Set("Authorization", "Bearer "+token)
 
 		rec := httptest.NewRecorder()
@@ -317,7 +317,7 @@ func TestGetInfo_Operations(t *testing.T) {
 		attackerToken, _ := setupUserAndToken(t)
 		fileId, _ := uploadFileForTest(t, ownerToken, "", "", "", nil) // Default is private if token exists
 
-		req, _ := http.NewRequest("GET", "/api/files/info/"+fileId, nil)
+		req, _ := http.NewRequest("GET", "/files/info/"+fileId, nil)
 		req.Header.Set("Authorization", "Bearer "+attackerToken)
 
 		rec := httptest.NewRecorder()
@@ -329,7 +329,7 @@ func TestGetInfo_Operations(t *testing.T) {
 	// 3. Not found
 	t.Run("File Not Found", func(t *testing.T) {
 		token, _ := setupUserAndToken(t)
-		req, _ := http.NewRequest("GET", "/api/files/info/non-existent-id", nil)
+		req, _ := http.NewRequest("GET", "/files/info/non-existent-id", nil)
 		req.Header.Set("Authorization", "Bearer "+token)
 
 		rec := httptest.NewRecorder()
@@ -345,7 +345,7 @@ func TestPublic_Info_By_ShareToken(t *testing.T) {
 	_, shareToken := uploadFileForTest(t, token, "", "", "", nil)
 
 	t.Run("Get Public Info via ShareToken", func(t *testing.T) {
-		req, _ := http.NewRequest("GET", "/api/files/public/"+shareToken, nil)
+		req, _ := http.NewRequest("GET", "/files/public/"+shareToken, nil)
 
 		rec := httptest.NewRecorder()
 		TestApp.Router().ServeHTTP(rec, req)

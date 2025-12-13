@@ -2,7 +2,7 @@ name: CI testing
 
 on:
   push:
-    branches: [main]
+    branches: [main, refactor/cicd]
   pull_request:
     branches: [main]
 
@@ -11,24 +11,19 @@ jobs:
     runs-on: self-hosted
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: Check Go
         run: go version
 
-      - name: Decrypt .env
-        run: |
-          echo "Decrypting..."
-          sops --decrypt --input-type dotenv --output-type dotenv --output .env dev.enc
-        env:
-          SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
+      - name: Prepare CI env
+        run: cp example.env .env
 
-      - name: Start containers
+      - name: Cleanup old containers & volumes
+        run: docker compose down -v
+
+      - name: Build & start containers
         run: docker compose up -d --build
-
-      - name: Build Go application
-        run: go build -v ./...
 
       - name: Run tests
         run: go test -v ./test

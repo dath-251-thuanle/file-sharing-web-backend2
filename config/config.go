@@ -2,7 +2,8 @@ package config
 
 import (
 	"fmt"
-
+	"strings"
+	
 	"github.com/dath-251-thuanle/file-sharing-web-backend2/pkg/utils"
 )
 
@@ -27,11 +28,19 @@ type Config struct {
 	DB            DatabaseConfig
 	ServerAddress string
 	Policy        *SystemPolicy
+	AllowedOrigins []string
 }
 
 func NewConfig() *Config {
+	originsStr := utils.GetEnv("CORS_ALLOWED_ORIGINS", "")
+	var allowedOrigins []string
+	if originsStr != "" {
+		allowedOrigins = strings.Split(originsStr, ",")
+	}
+
 	return &Config{
 		ServerAddress: fmt.Sprintf(":%s", utils.GetEnv("SERVER_PORT", "8080")),
+		AllowedOrigins: allowedOrigins,
 		DB: DatabaseConfig{
 			Host:     utils.GetEnv("DB_HOST", "localhost"),
 			Port:     utils.GetEnv("DB_PORT", "5435"),

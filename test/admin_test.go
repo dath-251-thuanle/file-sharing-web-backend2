@@ -35,7 +35,7 @@ func setupAdminToken(t *testing.T) string {
 	// 3. [QUAN TRỌNG] Login LẠI để lấy Token MỚI chứa quyền Admin
 	// Password mặc định trong setupUserAndToken là "123456789"
 	loginBody := fmt.Sprintf(`{"email": "%s", "password": "%s"}`, email, "123456789")
-	reqLogin, _ := http.NewRequest("POST", "/api/auth/login", bytes.NewBufferString(loginBody))
+	reqLogin, _ := http.NewRequest("POST", "/auth/login", bytes.NewBufferString(loginBody))
 	reqLogin.Header.Set("Content-Type", "application/json")
 
 	recLogin := httptest.NewRecorder()
@@ -68,7 +68,7 @@ func TestAdmin_GetPolicy(t *testing.T) {
 	t.Run("Admin Get Policy Success", func(t *testing.T) {
 		adminToken := setupAdminToken(t)
 
-		req, _ := http.NewRequest("GET", "/api/admin/policy", nil)
+		req, _ := http.NewRequest("GET", "/admin/policy", nil)
 		req.Header.Set("Authorization", "Bearer "+adminToken)
 
 		rec := httptest.NewRecorder()
@@ -93,7 +93,7 @@ func TestAdmin_GetPolicy(t *testing.T) {
 	t.Run("User Get Policy Forbidden", func(t *testing.T) {
 		userToken, _ := setupUserAndToken(t)
 
-		req, _ := http.NewRequest("GET", "/api/admin/policy", nil)
+		req, _ := http.NewRequest("GET", "/admin/policy", nil)
 		req.Header.Set("Authorization", "Bearer "+userToken)
 
 		rec := httptest.NewRecorder()
@@ -116,7 +116,7 @@ func TestAdmin_UpdatePolicy(t *testing.T) {
 		}
 		jsonBody, _ := json.Marshal(body)
 
-		req, _ := http.NewRequest("PATCH", "/api/admin/policy", bytes.NewBuffer(jsonBody))
+		req, _ := http.NewRequest("PATCH", "/admin/policy", bytes.NewBuffer(jsonBody))
 		req.Header.Set("Authorization", "Bearer "+adminToken)
 		req.Header.Set("Content-Type", "application/json")
 
@@ -126,7 +126,7 @@ func TestAdmin_UpdatePolicy(t *testing.T) {
 		assert.Equal(t, 200, rec.Code)
 
 		// Verify update
-		reqGet, _ := http.NewRequest("GET", "/api/admin/policy", nil)
+		reqGet, _ := http.NewRequest("GET", "/admin/policy", nil)
 		reqGet.Header.Set("Authorization", "Bearer "+adminToken)
 		recGet := httptest.NewRecorder()
 		TestApp.Router().ServeHTTP(recGet, reqGet)
@@ -149,7 +149,7 @@ func TestAdmin_UpdatePolicy(t *testing.T) {
 		}
 		jsonBody, _ := json.Marshal(body)
 
-		req, _ := http.NewRequest("PATCH", "/api/admin/policy", bytes.NewBuffer(jsonBody))
+		req, _ := http.NewRequest("PATCH", "/admin/policy", bytes.NewBuffer(jsonBody))
 		req.Header.Set("Authorization", "Bearer "+adminToken)
 		req.Header.Set("Content-Type", "application/json")
 
@@ -168,7 +168,7 @@ func TestAdmin_Cleanup(t *testing.T) {
 	adminToken := setupAdminToken(t)
 
 	t.Run("Trigger Cleanup Success", func(t *testing.T) {
-		req, _ := http.NewRequest("POST", "/api/admin/cleanup", nil)
+		req, _ := http.NewRequest("POST", "/admin/cleanup", nil)
 		req.Header.Set("Authorization", "Bearer "+adminToken)
 
 		rec := httptest.NewRecorder()
@@ -179,7 +179,7 @@ func TestAdmin_Cleanup(t *testing.T) {
 
 	t.Run("User Cannot Cleanup", func(t *testing.T) {
 		userToken, _ := setupUserAndToken(t)
-		req, _ := http.NewRequest("POST", "/api/admin/cleanup", nil)
+		req, _ := http.NewRequest("POST", "/admin/cleanup", nil)
 		req.Header.Set("Authorization", "Bearer "+userToken)
 
 		rec := httptest.NewRecorder()

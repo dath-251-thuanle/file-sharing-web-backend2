@@ -42,14 +42,21 @@ func NewApplication(cfg *config.Config) *Application {
 
 	r := gin.Default()
 
-	r.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"http://localhost:3000"},
+	corsConfig := cors.Config{
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
 		ExposeHeaders:    []string{"Content-Length"},
 		AllowCredentials: true,
 		MaxAge:           12 * time.Hour,
-	}))
+	}
+
+	if len(cfg.AllowedOrigins) > 0 {
+		corsConfig.AllowOrigins = cfg.AllowedOrigins
+	} else {
+		corsConfig.AllowAllOrigins = true 
+	}
+
+	r.Use(cors.New(corsConfig))
 
 	if err := database.InitDB(); err != nil {
 		log.Fatalf("unable to connnect to db: %v", err)
