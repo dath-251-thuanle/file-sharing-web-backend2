@@ -426,7 +426,7 @@ func (r *fileRepository) FindAll(ctx context.Context) ([]domain.File, *utils.Ret
 }
 
 func (r *fileRepository) RegisterDownload(ctx context.Context, fileID string, userID string) *utils.ReturnStatus {
-	_, err := r.db.ExecContext(ctx, `CALL proc_download($1, $2)`, fileID, userID)
+	_, err := r.db.ExecContext(ctx, `CALL proc_download($1, $2)`, fileID, sql.Null[string]{V: userID, Valid: userID != ""})
 
 	if err != nil {
 		return utils.ResponseMsg(utils.ErrCodeDatabaseError, err.Error())

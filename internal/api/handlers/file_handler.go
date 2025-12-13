@@ -245,12 +245,13 @@ func (fh *FileHandler) GetFileInfoVerbose(ctx *gin.Context) {
 func (fh *FileHandler) DownloadFile(ctx *gin.Context) {
 	fileToken := ctx.Param("shareToken")
 	password := ctx.Query("password")
-	userID, exists := ctx.Get("userID")
-	if !exists {
-		userID = nil
+	userIDptr, exists := ctx.Get("userID")
+	var userID string = ""
+	if exists {
+		userID = userIDptr.(string)
 	}
 
-	info, file, download_err := fh.file_service.DownloadFile(ctx, fileToken, userID.(string), password)
+	info, file, download_err := fh.file_service.DownloadFile(ctx, fileToken, userID, password)
 	if download_err != nil {
 		download_err.Export(ctx)
 		return

@@ -1154,10 +1154,6 @@ paths:
         **Owner preview trong giai đoạn pending:**
         - Nếu requester là owner (JWT hợp lệ, `sub` trùng `file.owner.id`), hệ thống cho phép bypass trạng thái `pending` để chủ file có thể kiểm thử trước khi tới giờ.
         - Tất cả user khác vẫn nhận 423 "File not yet available" cho tới khi `availableFrom` đến.
-
-        **Notification khi file chuyển trạng thái:**
-        - Khuyến nghị cấu hình cronjob/background task gửi email/SMS/webhook khi file chuyển từ `pending` sang `active` để owner và whitelist nhận thông báo.
-        - Endpoint này không tự gửi notification; cần bật tính năng ở backend hoặc job scheduler (xem mục Appendices/Future Enhancements).
       security:
         - BearerAuth: []
         - {}
