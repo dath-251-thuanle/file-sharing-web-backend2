@@ -1570,7 +1570,6 @@ paths:
                     error: Forbidden
                     message: You don't have permission to access this resource
 
-  /policy/limits:
     patch:
       tags:
         - Admin
