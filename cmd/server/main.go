@@ -22,7 +22,7 @@ func main() {
 	envPath := filepath.Join(cwd, ".env")
 
 	if err := godotenv.Load(envPath); err != nil {
-		panic("Error loading .env file")
+		log.Println("Warning: .env file not found. Using system environment variables instead.")
 	}
 
 	cfg := config.NewConfig()
