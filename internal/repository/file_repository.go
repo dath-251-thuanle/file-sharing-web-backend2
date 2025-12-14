@@ -524,7 +524,7 @@ func (r *fileRepository) GetFileStats(ctx context.Context, fileID string) (*doma
 func (r *fileRepository) GetAccessibleFiles(ctx context.Context, userID string) ([]domain.File, *utils.ReturnStatus) {
 	query := `
 		SELECT DISTINCT f.id
-		FROM files f LEFT JOIN shared s ON f.id = s.file_id
+		FROM files f JOIN shared s ON f.id = s.file_id
 		WHERE
 		(NOW() >= f.available_from AND NOW() < f.available_to)
 		AND $1 = s.user_id
