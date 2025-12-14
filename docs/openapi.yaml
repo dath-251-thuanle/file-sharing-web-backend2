@@ -611,21 +611,6 @@ paths:
                         owner: kdm@gmail.com
                         haspassword: false
                         sharetoken: oCZTb3WCs6GHn2FZ
-                      - fileid: 47b60c4a-07a4-466b-b3c1-5c8e47e269b0
-                        filename: test_file.txt
-                        owner: null
-                        haspassword: false
-                        sharetoken: MBkgYwBvYVWRnEmF
-                      - fileid: c0e7413e-d00e-4aa8-9269-8c7d31f1feec
-                        filename: test_file.txt
-                        owner: null
-                        haspassword: true
-                        sharetoken: 7tW8XWkJMd3Dvmim
-                      - fileid: 1c81e539-6f71-4e71-9c1e-5c41613af495
-                        filename: test_file.txt
-                        owner: null
-                        haspassword: false
-                        sharetoken: n2dKe99plZ8V55Eh
                     pagination:
                       currentPage: 2
                       limit: 10
