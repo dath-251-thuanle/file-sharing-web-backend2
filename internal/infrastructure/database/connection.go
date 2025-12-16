@@ -7,8 +7,6 @@ import (
 	"log"
 	"time"
 
-	_ "github.com/lib/pq"
-
 	"github.com/dath-251-thuanle/file-sharing-web-backend2/config"
 )
 

@@ -23,11 +23,5 @@ jobs:
         env:
           SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
 
-      - name: Cleanup old containers & volumes
-        run: docker compose down -v
-
-      - name: Build & start containers
-        run: docker compose up -d --build
-
       - name: Run tests
         run: go test -v ./test

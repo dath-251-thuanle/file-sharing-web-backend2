@@ -1,7 +1,8 @@
 /test/uploads
 /uploads
-.env
+*.env
 age.key
 cmd/server/.env
 /actions-runner
 .env.prod
+*.bat
