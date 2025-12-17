@@ -3,8 +3,9 @@ name: CD
 on:
   workflow_run:
     workflows: ["CI testing"]
-    types:
-      - completed
+    types: [completed]
+  workflow_dispatch:
+
 
 permissions:
   contents: read
@@ -19,7 +20,8 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.workflow_run.head_sha }}
+          ref: ${{ github.ref }}
+
 
       - name: Login GHCR
         uses: docker/login-action@v3
