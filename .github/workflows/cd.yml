@@ -30,7 +30,7 @@ jobs:
 
       - name: Build & Push image
         run: |
-          IMAGE=ghcr.io/${{ github.repository }}:${{ github.event.workflow_run.head_sha }}
+          $IMAGE=ghcr.io/${{ github.repository }}:${{ github.event.workflow_run.head_sha }}
           docker build -t $IMAGE .
           docker push $IMAGE
 
@@ -48,3 +48,4 @@ jobs:
         run: |
           docker compose pull
           docker compose up -d
+
