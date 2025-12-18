@@ -17,6 +17,9 @@ import (
 
 // setupAdminToken: Tạo user -> Update DB -> Login LẠI -> Trả về Token mới
 func setupAdminToken(t *testing.T) string {
+	t.Helper()
+	ResetDB(t)
+
 	// 1. Tạo user và lấy email (Token cũ vứt đi vì nó chỉ có quyền user)
 	_, email := setupUserAndToken(t)
 
@@ -65,6 +68,9 @@ func setupAdminToken(t *testing.T) string {
 // ==========================================
 
 func TestAdmin_GetPolicy(t *testing.T) {
+	ResetDB(t)
+	t.Cleanup(func() { ResetDB(t) })
+
 	t.Run("Admin Get Policy Success", func(t *testing.T) {
 		adminToken := setupAdminToken(t)
 
@@ -104,6 +110,9 @@ func TestAdmin_GetPolicy(t *testing.T) {
 }
 
 func TestAdmin_UpdatePolicy(t *testing.T) {
+	ResetDB(t)
+	t.Cleanup(func() { ResetDB(t) })
+
 	adminToken := setupAdminToken(t)
 
 	t.Run("Update Policy Success", func(t *testing.T) {
@@ -165,6 +174,9 @@ func TestAdmin_UpdatePolicy(t *testing.T) {
 // ==========================================
 
 func TestAdmin_Cleanup(t *testing.T) {
+	ResetDB(t)
+	t.Cleanup(func() { ResetDB(t) })
+
 	adminToken := setupAdminToken(t)
 
 	t.Run("Trigger Cleanup Success", func(t *testing.T) {
