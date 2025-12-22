@@ -66,6 +66,7 @@ file-sharing-web-backend/
 │   ├── middleware/       # Auth & Admin middleware
 │   ├── repository/       # Data access layer
 │   └── service/          # Business logic
+├── nginx/conf.d          # nginx config
 ├── pkg/                  # Shared packages
 │   ├── utils/
 │   └── validation/
