@@ -2,7 +2,7 @@ name: CI testing
 
 on:
   push:
-    branches: [main, refactor/cicd, production]
+    branches: [main, refactor/cicd, production, test/unit]
   pull_request:
     branches: [main]
 
@@ -27,5 +27,8 @@ jobs:
           SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
 
       - name: Run unit test
-        run: echo "There is no unit test."
+        run: |
+          echo "There is some unit tests."
+          go test -v ./pkg/validation/... ./internal/service/...
+
 

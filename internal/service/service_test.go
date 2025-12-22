@@ -19,9 +19,10 @@ import (
 
 func strPtr(s string) *string { return &s }
 
-type MockUserRepo struct{ 
-	mock.Mock 
+type MockUserRepo struct {
+	mock.Mock
 }
+
 func (m *MockUserRepo) FindByEmail(email string, user *domain.User) *utils.ReturnStatus {
 	args := m.Called(email, user)
 	if args.Get(0) == nil {
@@ -36,23 +37,19 @@ func (m *MockUserRepo) AddTimestamp(id, cid string) *utils.ReturnStatus {
 	return m.Called(id, cid).Get(0).(*utils.ReturnStatus)
 }
 func (m *MockUserRepo) FindById(id string, user *domain.User) *utils.ReturnStatus {
-	args := m.Called(id, user)
-	if args.Get(0) == nil {
-		if u, ok := args.Get(1).(domain.User); ok { *user = u }
-		return nil
-	}
-	return args.Get(0).(*utils.ReturnStatus)
+	return nil
 }
-func (m *MockUserRepo) FindByCId(cid string, u *domain.UsersLoginSession) *utils.ReturnStatus { 
-	return nil 
+func (m *MockUserRepo) FindByCId(cid string, u *domain.UsersLoginSession) *utils.ReturnStatus {
+	return nil
 }
-func (m *MockUserRepo) DeleteTimestamp(id string) *utils.ReturnStatus { 
-	return nil 
+func (m *MockUserRepo) DeleteTimestamp(id string) *utils.ReturnStatus {
+	return nil
 }
 
-type MockFileRepo struct{ 
-	mock.Mock 
+type MockFileRepo struct {
+	mock.Mock
 }
+
 func (m *MockFileRepo) CreateFile(ctx context.Context, file *domain.File) (*domain.File, *utils.ReturnStatus) {
 	args := m.Called(ctx, file)
 	if fn, ok := args.Get(0).(func(context.Context, *domain.File) *domain.File); ok {
@@ -61,112 +58,95 @@ func (m *MockFileRepo) CreateFile(ctx context.Context, file *domain.File) (*doma
 	return args.Get(0).(*domain.File), args.Get(1).(*utils.ReturnStatus)
 }
 func (m *MockFileRepo) GetMyFiles(ctx context.Context, uid string, p domain.ListFileParams) ([]domain.File, *utils.ReturnStatus) {
-	args := m.Called(ctx, uid, p)
-	if args.Get(0) == nil {
-		return nil, args.Get(1).(*utils.ReturnStatus)
-	}
-	return args.Get(0).([]domain.File), args.Get(1).(*utils.ReturnStatus)
+	return nil, nil
 }
 func (m *MockFileRepo) GetFileByID(ctx context.Context, id string) (*domain.File, *utils.ReturnStatus) {
-	args := m.Called(ctx, id)
-	if args.Get(0) == nil { return nil, args.Get(1).(*utils.ReturnStatus) }
-	return args.Get(0).(*domain.File), args.Get(1).(*utils.ReturnStatus)
+	return nil, nil
 }
 func (m *MockFileRepo) GetFileByToken(ctx context.Context, t string) (*domain.File, *utils.ReturnStatus) {
-	args := m.Called(ctx, t)
-	if args.Get(0) == nil { return nil, args.Get(1).(*utils.ReturnStatus) }
-	return args.Get(0).(*domain.File), args.Get(1).(*utils.ReturnStatus)
+	return nil, nil
 }
 func (m *MockFileRepo) RegisterDownload(ctx context.Context, fid, uid string) *utils.ReturnStatus {
-	return m.Called(ctx, fid, uid).Get(0).(*utils.ReturnStatus)
+	return nil
 }
 func (m *MockFileRepo) DeleteFile(ctx context.Context, id string) *utils.ReturnStatus {
-	return m.Called(ctx, id).Get(0).(*utils.ReturnStatus)
+	return nil
 }
-func (m *MockFileRepo) GetFileSummary(ctx context.Context, uid string) (*domain.FileSummary, *utils.ReturnStatus) { 
-	return nil, nil 
+func (m *MockFileRepo) GetFileSummary(ctx context.Context, uid string) (*domain.FileSummary, *utils.ReturnStatus) {
+	return nil, nil
 }
-func (m *MockFileRepo) GetTotalUserFiles(ctx context.Context, uid string) (int, *utils.ReturnStatus) { 
-	return 0, nil 
+func (m *MockFileRepo) GetTotalUserFiles(ctx context.Context, uid string) (int, *utils.ReturnStatus) {
+	return 0, nil
 }
-func (m *MockFileRepo) FindAll(ctx context.Context) ([]domain.File, *utils.ReturnStatus) { 
-	return nil, nil 
+func (m *MockFileRepo) FindAll(ctx context.Context) ([]domain.File, *utils.ReturnStatus) {
+	return nil, nil
 }
-func (m *MockFileRepo) GetFileDownloadHistory(ctx context.Context, fid string) (*domain.FileDownloadHistory, *utils.ReturnStatus) { 
-	return nil, nil 
+func (m *MockFileRepo) GetFileDownloadHistory(ctx context.Context, fid string) (*domain.FileDownloadHistory, *utils.ReturnStatus) {
+	return nil, nil
 }
 func (m *MockFileRepo) GetFileStats(ctx context.Context, fid string) (*domain.FileStat, *utils.ReturnStatus) {
-	return nil, nil 
+	return nil, nil
 }
-func (m *MockFileRepo) GetAccessibleFiles(ctx context.Context, uid string) ([]domain.File, *utils.ReturnStatus) { 
+func (m *MockFileRepo) GetAccessibleFiles(ctx context.Context, uid string) ([]domain.File, *utils.ReturnStatus) {
 	return nil, nil
 }
 
-type MockStorage struct{ 
-	mock.Mock 
+type MockStorage struct {
+	mock.Mock
 }
+
 func (m *MockStorage) SaveFile(f *multipart.FileHeader, name string) (string, *utils.ReturnStatus) {
 	args := m.Called(f, name)
 	return args.String(0), args.Get(1).(*utils.ReturnStatus)
 }
 func (m *MockStorage) DeleteFile(name string) *utils.ReturnStatus {
-	return m.Called(name).Get(0).(*utils.ReturnStatus)
+	return nil
 }
 func (m *MockStorage) GetFile(name string) (io.Reader, *utils.ReturnStatus) {
-	args := m.Called(name)
-	if args.Get(0) == nil {
-		return nil, args.Get(1).(*utils.ReturnStatus)
-	}
-	return args.Get(0).(io.Reader), args.Get(1).(*utils.ReturnStatus)
+	return nil, nil
 }
 
-type MockTokenService struct{ 
-	mock.Mock 
+type MockTokenService struct {
+	mock.Mock
 }
 func (m *MockTokenService) GenerateAccessToken(u domain.User) (string, error) {
 	args := m.Called(u)
 	return args.String(0), args.Error(1)
 }
-
 func (m *MockTokenService) ParseToken(s string) (*jwt.Claims, error) {
-	args := m.Called(s)
-	if args.Get(0) == nil {
-		return nil, args.Error(1)
-	}
-	return args.Get(0).(*jwt.Claims), args.Error(1)
+	return nil, nil
 }
 
-type MockSharedRepo struct{ 
-	mock.Mock 
+type MockSharedRepo struct {
+	mock.Mock
 }
 func (m *MockSharedRepo) ShareFileWithUsers(ctx context.Context, fid string, emails []string) *utils.ReturnStatus {
 	return nil
 }
 func (m *MockSharedRepo) GetUsersSharedWith(ctx context.Context, fid string) (*domain.Shared, *utils.ReturnStatus) {
-	args := m.Called(ctx, fid)
-	if args.Get(0) == nil { return nil, args.Get(1).(*utils.ReturnStatus) }
-	return args.Get(0).(*domain.Shared), args.Get(1).(*utils.ReturnStatus)
+	return nil, nil
 }
 
-type MockAuthRepo struct{ 
-	mock.Mock 
+type MockAuthRepo struct {
+	mock.Mock
 }
-func (m *MockAuthRepo) Create(u *domain.User) (*domain.User, *utils.ReturnStatus) { 
-	return nil, nil 
+
+func (m *MockAuthRepo) Create(u *domain.User) (*domain.User, *utils.ReturnStatus) {
+	return nil, nil
 }
 func (m *MockAuthRepo) BlacklistToken(t string, e time.Time) *utils.ReturnStatus {
-	return nil 
+	return nil
 }
 func (m *MockAuthRepo) IsTokenBlacklisted(t string) (bool, *utils.ReturnStatus) {
-	return false, nil 
+	return false, nil
 }
-func (m *MockAuthRepo) SaveSecret(u, s string) *utils.ReturnStatus { 
-	return nil 
+func (m *MockAuthRepo) SaveSecret(u, s string) *utils.ReturnStatus {
+	return nil
 }
 func (m *MockAuthRepo) GetSecret(u string) (string, *utils.ReturnStatus) {
-	return "", nil 
+	return "", nil
 }
-func (m *MockAuthRepo) EnableTOTP(u string) *utils.ReturnStatus { 
+func (m *MockAuthRepo) EnableTOTP(u string) *utils.ReturnStatus {
 	return nil
 }
 
