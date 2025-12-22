@@ -3,7 +3,7 @@ package config
 import (
 	"fmt"
 	"strings"
-	
+
 	"github.com/dath-251-thuanle/file-sharing-web-backend2/pkg/utils"
 )
 
@@ -15,40 +15,27 @@ type SystemPolicy struct {
 	RequirePasswordMinLength int
 }
 
-type DatabaseConfig struct {
-	Host     string
-	Port     string
-	User     string
-	Password string
-	DBName   string
-	SSLMode  string
-}
-
-type Config struct {
-	DB            DatabaseConfig
-	ServerAddress string
-	Policy        *SystemPolicy
+type CORSConfig struct {
 	AllowedOrigins []string
 }
 
+type Config struct {
+	ServerAddress string
+	DatabaseURL   string
+	Policy        *SystemPolicy
+	CORS          CORSConfig
+}
+
 func NewConfig() *Config {
-	originsStr := utils.GetEnv("CORS_ALLOWED_ORIGINS", "")
-	var allowedOrigins []string
-	if originsStr != "" {
-		allowedOrigins = strings.Split(originsStr, ",")
+	dbURL := utils.GetEnv("DATABASE_URL", "")
+	if dbURL == "" {
+		panic("DATABASE_URL is required")
 	}
 
 	return &Config{
 		ServerAddress: fmt.Sprintf(":%s", utils.GetEnv("SERVER_PORT", "8080")),
-		AllowedOrigins: allowedOrigins,
-		DB: DatabaseConfig{
-			Host:     utils.GetEnv("DB_HOST", "localhost"),
-			Port:     utils.GetEnv("DB_PORT", "5435"),
-			User:     utils.GetEnv("DB_USER", "postgres"),
-			Password: utils.GetEnv("DB_PASSWORD", "postgres"),
-			DBName:   utils.GetEnv("DB_NAME", "file-sharing"),
-			SSLMode:  utils.GetEnv("DB_SSLMODE", "disable"),
-		},
+		DatabaseURL:   dbURL,
+		CORS:          loadCORSConfig(),
 		Policy: &SystemPolicy{
 			MaxFileSizeMB:            50,
 			MinValidityHours:         1,
@@ -59,6 +46,26 @@ func NewConfig() *Config {
 	}
 }
 
-func (c *Config) DNS() string {
-	return fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s", c.DB.Host, c.DB.Port, c.DB.User, c.DB.Password, c.DB.DBName, c.DB.SSLMode)
+func (c *Config) DSN() string {
+	return c.DatabaseURL
+}
+
+func loadCORSConfig() CORSConfig {
+	return CORSConfig{
+		AllowedOrigins: splitAndTrim(
+			utils.GetEnv("CORS_ALLOWED_ORIGINS", "*"),
+		),
+	}
+}
+
+func splitAndTrim(s string) []string {
+	if s == "" {
+		return nil
+	}
+
+	parts := strings.Split(s, ",")
+	for i := range parts {
+		parts[i] = strings.TrimSpace(parts[i])
+	}
+	return parts
 }

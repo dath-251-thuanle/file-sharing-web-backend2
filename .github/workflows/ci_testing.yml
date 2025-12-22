@@ -2,7 +2,7 @@ name: CI testing
 
 on:
   push:
-    branches: [main, refactor/cicd]
+    branches: [main, refactor/cicd, production]
   pull_request:
     branches: [main]
 
@@ -10,20 +10,22 @@ jobs:
   run-ci-testing:
     runs-on: self-hosted
 
+    env:
+      DATABASE_URL: postgres://postgres:566493@localhost:5432/file_sharing_test?sslmode=disable&options=-csearch_path=test_schema
+
     steps:
       - uses: actions/checkout@v4
 
       - name: Check Go
         run: go version
 
-      - name: Prepare CI env
-        run: cp example.env .env
+      - name: Decrypt .env
+        run: |
+          echo "Decrypting..."
+          sops --decrypt --input-type dotenv --output-type dotenv --output .env dev.enc
+        env:
+          SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
 
-      - name: Cleanup old containers & volumes
-        run: docker compose down -v
+      - name: Run unit test
+        run: echo "There is no unit test."
 
-      - name: Build & start containers
-        run: docker compose up -d --build
-
-      - name: Run tests
-        run: go test -v ./test

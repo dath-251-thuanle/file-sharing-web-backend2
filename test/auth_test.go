@@ -11,144 +11,151 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var testEmail = fmt.Sprintf("testuser_%d@example.com", time.Now().UnixNano())
-var testPassword = "Password123"
-var testUsername = "testuser"
+func TestAuth_TOTP_Flow(t *testing.T) {
+	ResetDB(t)
+	t.Cleanup(func() { ResetDB(t) })
 
-var authToken string
-var totpSecret string
+	var (
+		testEmail    = fmt.Sprintf("testuser_%d@example.com", time.Now().UnixNano())
+		testPassword = "Password123"
+		testUsername = "testuser"
 
-// ---------------------------
-// 1. REGISTER
-// ---------------------------
-func TestRegister(t *testing.T) {
+		authToken  string
+		totpSecret string
+	)
 
-	body := fmt.Sprintf(`{
-		"username": "%s",
-		"email": "%s",
-		"password": "%s"
-	}`, testUsername, testEmail, testPassword)
+	// ---------------------------
+	// 1. REGISTER
+	// ---------------------------
+	t.Run("REGISTER", func (t *testing.T) {
+		body := fmt.Sprintf(`{
+			"username": "%s",
+			"email": "%s",
+			"password": "%s"
+		}`, testUsername, testEmail, testPassword)
 
-	req := httptest.NewRequest("POST", "/auth/register", bytes.NewBufferString(body))
-	req.Header.Set("Content-Type", "application/json")
+		req := httptest.NewRequest("POST", "/auth/register", bytes.NewBufferString(body))
+		req.Header.Set("Content-Type", "application/json")
 
-	rec := httptest.NewRecorder()
-	TestApp.Router().ServeHTTP(rec, req)
+		rec := httptest.NewRecorder()
+		TestApp.Router().ServeHTTP(rec, req)
 
-	assert.Equal(t, 200, rec.Code)
+		assert.Equal(t, 200, rec.Code)
 
-	json := ParseJSON(t, rec)
-	assert.Equal(t, "User registered successfully", json["message"])
-}
+		json := ParseJSON(t, rec)
+		assert.Equal(t, "User registered successfully", json["message"])
+	})
 
-// ---------------------------
-// 2. LOGIN (no TOTP)
-// ---------------------------
-func TestLogin_NoTOTP(t *testing.T) {
+	// ---------------------------
+	// 2. LOGIN (no TOTP)
+	// ---------------------------
+	t.Run("LOGIN", func (t *testing.T) {
 
-	body := fmt.Sprintf(`{
-		"email": "%s",
-		"password": "%s"
-	}`, testEmail, testPassword)
+		body := fmt.Sprintf(`{
+			"email": "%s",
+			"password": "%s"
+		}`, testEmail, testPassword)
 
-	req := httptest.NewRequest("POST", "/auth/login", bytes.NewBufferString(body))
-	req.Header.Set("Content-Type", "application/json")
+		req := httptest.NewRequest("POST", "/auth/login", bytes.NewBufferString(body))
+		req.Header.Set("Content-Type", "application/json")
 
-	rec := httptest.NewRecorder()
-	TestApp.Router().ServeHTTP(rec, req)
+		rec := httptest.NewRecorder()
+		TestApp.Router().ServeHTTP(rec, req)
 
-	assert.Equal(t, 200, rec.Code)
+		assert.Equal(t, 200, rec.Code)
 
-	json := ParseJSON(t, rec)
-	assert.NotEmpty(t, json["accessToken"])
+		json := ParseJSON(t, rec)
+		assert.NotEmpty(t, json["accessToken"])
 
-	authToken = json["accessToken"].(string)
-}
+		authToken = json["accessToken"].(string)
+	})
 
-// ---------------------------
-// 3. SETUP TOTP
-// ---------------------------
-func TestSetupTOTP(t *testing.T) {
+	// ---------------------------
+	// 3. SETUP TOTP
+	// ---------------------------
+	t.Run("SETUP TOTP", func (t *testing.T) {
 
-	req := httptest.NewRequest("POST", "/auth/totp/setup", nil)
-	req.Header.Set("Authorization", "Bearer "+authToken)
 
-	rec := httptest.NewRecorder()
-	TestApp.Router().ServeHTTP(rec, req)
+		req := httptest.NewRequest("POST", "/auth/totp/setup", nil)
+		req.Header.Set("Authorization", "Bearer "+authToken)
 
-	assert.Equal(t, 200, rec.Code)
+		rec := httptest.NewRecorder()
+		TestApp.Router().ServeHTTP(rec, req)
 
-	json := ParseJSON(t, rec)
-	setup := json["totpSetup"].(map[string]interface{})
+		assert.Equal(t, 200, rec.Code)
 
-	totpSecret = setup["secret"].(string)
+		json := ParseJSON(t, rec)
+		setup := json["totpSetup"].(map[string]interface{})
 
-	assert.NotEmpty(t, totpSecret)
-	assert.NotEmpty(t, setup["qrCode"])
-}
+		totpSecret = setup["secret"].(string)
 
-// ---------------------------
-// 4. MANUAL ENABLE TOTP IN DB
-// ---------------------------
-func TestForceEnableTOTP(t *testing.T) {
+		assert.NotEmpty(t, totpSecret)
+		assert.NotEmpty(t, setup["qrCode"])
+	})
 
-	db := TestApp.DB()
-	_, err := db.Exec(`UPDATE users SET enabletotp = true WHERE email=$1`, testEmail)
+	// ---------------------------
+	// 4. MANUAL ENABLE TOTP IN DB
+	// ---------------------------
+	t.Run("MANUAL ENABLE TOTP IN DB", func (t *testing.T) {
 
-	assert.NoError(t, err)
-}
+		db := TestApp.DB()
+		_, err := db.Exec(`UPDATE users SET enabletotp = true WHERE email=$1`, testEmail)
 
-// ---------------------------
-// 5. LOGIN AGAIN -> requireTOTP
-// ---------------------------
-func TestLogin_RequireTOTP(t *testing.T) {
+		assert.NoError(t, err)
+	})
 
-	body := fmt.Sprintf(`{
-		"email": "%s",
-		"password": "%s"
-	}`, testEmail, testPassword)
+	// ---------------------------
+	// 5. LOGIN AGAIN -> requireTOTP
+	// ---------------------------
+	t.Run("MANUAL ENABLE TOTP IN DB", func (t *testing.T) {
 
-	req := httptest.NewRequest("POST", "/auth/login", bytes.NewBufferString(body))
-	req.Header.Set("Content-Type", "application/json")
+		body := fmt.Sprintf(`{
+			"email": "%s",
+			"password": "%s"
+		}`, testEmail, testPassword)
 
-	rec := httptest.NewRecorder()
-	TestApp.Router().ServeHTTP(rec, req)
+		req := httptest.NewRequest("POST", "/auth/login", bytes.NewBufferString(body))
+		req.Header.Set("Content-Type", "application/json")
 
-	assert.Equal(t, 200, rec.Code)
+		rec := httptest.NewRecorder()
+		TestApp.Router().ServeHTTP(rec, req)
 
-	json := ParseJSON(t, rec)
+		assert.Equal(t, 200, rec.Code)
 
-	assert.Equal(t, true, json["requireTOTP"])
-	assert.NotEmpty(t, json["cid"])
+		json := ParseJSON(t, rec)
 
-	serverSecret := os.Getenv("JWT_SECRET_KEY")
-	assert.NotEmpty(t, serverSecret)
-}
+		assert.Equal(t, true, json["requireTOTP"])
+		assert.NotEmpty(t, json["cid"])
 
-// ---------------------------
-// 6. GET PROFILE (token cũ vẫn valid)
-// ---------------------------
-func TestGetProfile(t *testing.T) {
+		serverSecret := os.Getenv("JWT_SECRET_KEY")
+		assert.NotEmpty(t, serverSecret)
+	})
 
-	req := httptest.NewRequest("GET", "/user", nil)
-	req.Header.Set("Authorization", "Bearer "+authToken)
+	// ---------------------------
+	// 6. GET PROFILE (token cũ vẫn valid)
+	// ---------------------------
+	t.Run("GET PROFILE", func (t *testing.T) {
 
-	rec := httptest.NewRecorder()
-	TestApp.Router().ServeHTTP(rec, req)
+		req := httptest.NewRequest("GET", "/user", nil)
+		req.Header.Set("Authorization", "Bearer "+authToken)
 
-	assert.Equal(t, 200, rec.Code)
-}
+		rec := httptest.NewRecorder()
+		TestApp.Router().ServeHTTP(rec, req)
 
-// ---------------------------
-// 7. LOGOUT
-// ---------------------------
-func TestLogout(t *testing.T) {
+		assert.Equal(t, 200, rec.Code)
+	})
 
-	req := httptest.NewRequest("POST", "/auth/logout", nil)
-	req.Header.Set("Authorization", "Bearer "+authToken)
+	// ---------------------------
+	// 7. LOGOUT
+	// ---------------------------
+	t.Run("LOGOUT", func (t *testing.T) {
 
-	rec := httptest.NewRecorder()
-	TestApp.Router().ServeHTTP(rec, req)
+		req := httptest.NewRequest("POST", "/auth/logout", nil)
+		req.Header.Set("Authorization", "Bearer "+authToken)
 
-	assert.Equal(t, 200, rec.Code)
+		rec := httptest.NewRecorder()
+		TestApp.Router().ServeHTTP(rec, req)
+
+		assert.Equal(t, 200, rec.Code)
+	})
 }

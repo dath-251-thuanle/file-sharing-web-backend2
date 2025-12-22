@@ -3,7 +3,6 @@ package main
 import (
 	"log"
 	"os"
-	"path/filepath"
 
 	"github.com/dath-251-thuanle/file-sharing-web-backend2/config"
 	"github.com/dath-251-thuanle/file-sharing-web-backend2/internal/app"
@@ -11,24 +10,14 @@ import (
 )
 
 func main() {
-	// Application entry point
+	log.Println("DATABASE_URL =", os.Getenv("DATABASE_URL"))
 
-	cwd, err := os.Getwd()
-
-	if err != nil {
-		log.Fatal(" Unable to get working dir:", err)
-	}
-
-	envPath := filepath.Join(cwd, ".env")
-
-	if err := godotenv.Load(envPath); err != nil {
-		log.Println("Warning: .env file not found. Using system environment variables instead.")
+	// load .env only in local
+	if os.Getenv("RAILWAY_ENVIRONMENT") == "" {
+		_ = godotenv.Load()
 	}
 
 	cfg := config.NewConfig()
-
 	application := app.NewApplication(cfg)
-
 	application.Run()
-
 }

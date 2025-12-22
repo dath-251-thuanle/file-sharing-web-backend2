@@ -7,15 +7,14 @@ import (
 	"log"
 	"time"
 
-	_ "github.com/lib/pq"
-
 	"github.com/dath-251-thuanle/file-sharing-web-backend2/config"
+	_ "github.com/lib/pq"
 )
 
 var DB *sql.DB
 
 func InitDB() error {
-	connStr := config.NewConfig().DNS()
+	connStr := config.NewConfig().DSN()
 
 	var err error
 	DB, err = sql.Open("postgres", connStr)

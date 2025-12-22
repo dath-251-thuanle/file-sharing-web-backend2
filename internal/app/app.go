@@ -50,8 +50,8 @@ func NewApplication(cfg *config.Config) *Application {
 		MaxAge:           12 * time.Hour,
 	}
 
-	if len(cfg.AllowedOrigins) > 0 {
-		corsConfig.AllowOrigins = cfg.AllowedOrigins
+	if len(cfg.CORS.AllowedOrigins) > 0 {
+		corsConfig.AllowOrigins = cfg.CORS.AllowedOrigins
 	} else {
 		corsConfig.AllowAllOrigins = true 
 	}

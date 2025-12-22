@@ -19,6 +19,8 @@ import (
 
 // setupUserAndToken: Register -> Login -> Return (Token, Email)
 func setupUserAndToken(t *testing.T) (string, string) {
+	t.Helper()
+
 	uniqueID := time.Now().UnixNano()
 	username := fmt.Sprintf("user_%d", uniqueID)
 	email := fmt.Sprintf("user_%d@example.com", uniqueID)
@@ -47,25 +49,25 @@ func setupUserAndToken(t *testing.T) (string, string) {
 
 	// 3. Extract Token
 	resp := ParseJSON(t, recLogin)
-	token := ""
 
 	if data, ok := resp["data"].(map[string]interface{}); ok {
-		if t, ok := data["accessToken"].(string); ok {
-			token = t
+		if token, ok := data["accessToken"].(string); ok {
+			return token, email
 		}
-	} else if t, ok := resp["accessToken"].(string); ok {
-		token = t
 	}
 
-	if token == "" {
-		t.Fatal("Cannot extract token from login response")
+	if token, ok := resp["accessToken"].(string); ok {
+		return token, email
 	}
 
-	return token, email
+	t.Fatal("Cannot extract token from login response")
+	return "", ""
 }
 
 // uploadFileForTest: Helper upload with full options
 func uploadFileForTest(t *testing.T, token string, password string, availableFrom string, availableTo string, sharedWith []string) (string, string) {
+	t.Helper()
+
 	var buf bytes.Buffer
 	writer := multipart.NewWriter(&buf)
 
@@ -128,6 +130,9 @@ func uploadFileForTest(t *testing.T, token string, password string, availableFro
 // ==========================================
 
 func TestUpload_Scenarios(t *testing.T) {
+	ResetDB(t)
+	t.Cleanup(func() { ResetDB(t) })
+
 	// Case: Anonymous Upload
 	t.Run("Anonymous Upload", func(t *testing.T) {
 		id, token := uploadFileForTest(t, "", "", "", "", nil)
@@ -157,6 +162,9 @@ func TestUpload_Scenarios(t *testing.T) {
 }
 
 func TestDownload_PublicFile(t *testing.T) {
+	ResetDB(t)
+	t.Cleanup(func() { ResetDB(t) })
+
 	token, _ := setupUserAndToken(t)
 	_, shareToken := uploadFileForTest(t, "", "", "", "", nil) // Anonymous file
 
@@ -169,6 +177,9 @@ func TestDownload_PublicFile(t *testing.T) {
 }
 
 func TestDownload_PasswordProtected(t *testing.T) {
+	ResetDB(t)
+	t.Cleanup(func() { ResetDB(t) })
+
 	token, _ := setupUserAndToken(t)
 	pass := "SecurePass123"
 	_, shareToken := uploadFileForTest(t, "", pass, "", "", nil)
@@ -193,6 +204,9 @@ func TestDownload_PasswordProtected(t *testing.T) {
 }
 
 func TestDownload_TimeRestricted(t *testing.T) {
+	ResetDB(t)
+	t.Cleanup(func() { ResetDB(t) })
+
 	ownerToken, _ := setupUserAndToken(t)
 	downloaderToken, downloaderEmail := setupUserAndToken(t)
 
@@ -240,6 +254,9 @@ func TestDownload_TimeRestricted(t *testing.T) {
 }
 
 func TestDelete_Operations(t *testing.T) {
+	ResetDB(t)
+	t.Cleanup(func() { ResetDB(t) })
+
 	// Anonymous
 	t.Run("Anonymous Delete Fail", func(t *testing.T) {
 		fileId, _ := uploadFileForTest(t, "", "", "", "", nil)
@@ -276,6 +293,9 @@ func TestDelete_Operations(t *testing.T) {
 }
 
 func TestMyFiles_List(t *testing.T) {
+	ResetDB(t)
+	t.Cleanup(func() { ResetDB(t) })
+
 	token, _ := setupUserAndToken(t)
 	uploadFileForTest(t, token, "", "", "", nil)
 	uploadFileForTest(t, token, "", "", "", nil)
@@ -293,6 +313,9 @@ func TestMyFiles_List(t *testing.T) {
 	assert.GreaterOrEqual(t, len(files), 2)
 }
 func TestGetInfo_Operations(t *testing.T) {
+	ResetDB(t)
+	t.Cleanup(func() { ResetDB(t) })
+
 	// 1. Owner get info
 	t.Run("Owner Get Info Success", func(t *testing.T) {
 		token, _ := setupUserAndToken(t)
@@ -340,6 +363,8 @@ func TestGetInfo_Operations(t *testing.T) {
 }
 
 func TestPublic_Info_By_ShareToken(t *testing.T) {
+	ResetDB(t)
+	t.Cleanup(func() { ResetDB(t) })
 
 	token, _ := setupUserAndToken(t)
 	_, shareToken := uploadFileForTest(t, token, "", "", "", nil)
