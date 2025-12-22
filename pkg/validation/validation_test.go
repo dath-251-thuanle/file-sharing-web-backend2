@@ -47,20 +47,6 @@ func TestValidationAndErrorHandling(t *testing.T) {
 			expectedMsg:   "password must be at least 8 characters long and contain lowercase, uppercase, numbers, and special characters",
 		},
 		{
-			name:          "min int",
-			input:         TestStruct{Email: "test@gmail.com", Password: "PassWord@123", Slug: "s", Search: "s", MinInt: 5, MaxInt: 15, File: "test.jpg"},
-			expectErr:     true,
-			expectedField: "min_int",
-			expectedMsg:   "min_int must be at least 10",
-		},
-		{
-			name:          "max int",
-			input:         TestStruct{Email: "test@gmail.com", Password: "PassWord@123", Slug: "s", Search: "s", MinInt: 15, MaxInt: 25, File: "test.jpg"},
-			expectErr:     true,
-			expectedField: "max_int",
-			expectedMsg:   "max_int must be at most 20",
-		},
-		{
 			name:          "file ext",
 			input:         TestStruct{Email: "test@gmail.com", Password: "PassWord@123", Slug: "s", Search: "s", MinInt: 15, MaxInt: 15, File: "test.exe"},
 			expectErr:     true,

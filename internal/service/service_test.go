@@ -34,7 +34,11 @@ func (m *MockUserRepo) FindByEmail(email string, user *domain.User) *utils.Retur
 	return args.Get(0).(*utils.ReturnStatus)
 }
 func (m *MockUserRepo) AddTimestamp(id, cid string) *utils.ReturnStatus {
-	return m.Called(id, cid).Get(0).(*utils.ReturnStatus)
+	args := m.Called(id, cid)
+	if args.Get(0) == nil {
+		return nil
+	}
+	return args.Get(0).(*utils.ReturnStatus)
 }
 func (m *MockUserRepo) FindById(id string, user *domain.User) *utils.ReturnStatus {
 	return nil
@@ -52,10 +56,18 @@ type MockFileRepo struct {
 
 func (m *MockFileRepo) CreateFile(ctx context.Context, file *domain.File) (*domain.File, *utils.ReturnStatus) {
 	args := m.Called(ctx, file)
+	var f *domain.File
 	if fn, ok := args.Get(0).(func(context.Context, *domain.File) *domain.File); ok {
-		return fn(ctx, file), args.Get(1).(*utils.ReturnStatus)
+		f = fn(ctx, file)
+	} else if args.Get(0) != nil {
+		f = args.Get(0).(*domain.File)
 	}
-	return args.Get(0).(*domain.File), args.Get(1).(*utils.ReturnStatus)
+
+	var err *utils.ReturnStatus
+	if args.Get(1) != nil {
+		err = args.Get(1).(*utils.ReturnStatus)
+	}
+	return f, err
 }
 func (m *MockFileRepo) GetMyFiles(ctx context.Context, uid string, p domain.ListFileParams) ([]domain.File, *utils.ReturnStatus) {
 	return nil, nil
@@ -97,7 +109,11 @@ type MockStorage struct {
 
 func (m *MockStorage) SaveFile(f *multipart.FileHeader, name string) (string, *utils.ReturnStatus) {
 	args := m.Called(f, name)
-	return args.String(0), args.Get(1).(*utils.ReturnStatus)
+	var err *utils.ReturnStatus
+	if args.Get(1) != nil {
+		err = args.Get(1).(*utils.ReturnStatus)
+	}
+	return args.String(0), err
 }
 func (m *MockStorage) DeleteFile(name string) *utils.ReturnStatus {
 	return nil
@@ -109,6 +125,7 @@ func (m *MockStorage) GetFile(name string) (io.Reader, *utils.ReturnStatus) {
 type MockTokenService struct {
 	mock.Mock
 }
+
 func (m *MockTokenService) GenerateAccessToken(u domain.User) (string, error) {
 	args := m.Called(u)
 	return args.String(0), args.Error(1)
@@ -120,6 +137,7 @@ func (m *MockTokenService) ParseToken(s string) (*jwt.Claims, error) {
 type MockSharedRepo struct {
 	mock.Mock
 }
+
 func (m *MockSharedRepo) ShareFileWithUsers(ctx context.Context, fid string, emails []string) *utils.ReturnStatus {
 	return nil
 }
