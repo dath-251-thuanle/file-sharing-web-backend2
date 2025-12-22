@@ -26,21 +26,6 @@ jobs:
         env:
           SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
 
-      - name: Prepare test database
-        shell: powershell
-        run: |
-          psql -U postgres -h localhost -p 5432 -c "DROP DATABASE IF EXISTS file_sharing_test;"
-          psql -U postgres -h localhost -p 5432 -c "CREATE DATABASE file_sharing_test;"
-        env:
-          PGPASSWORD: 566493
-      ##This should be on CD test, not here
-      - name: Run tests
-        run: go test -v ./test
+      - name: Run unit test
+        run: echo "There is no unit test."
 
-      - name: Cleanup database
-        if: always()
-        shell: powershell
-        run: |
-          psql -U postgres -h localhost -p 5432 -c "DROP DATABASE IF EXISTS file_sharing_test;"
-        env:
-          PGPASSWORD: 566493
