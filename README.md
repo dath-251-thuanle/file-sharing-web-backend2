@@ -72,6 +72,7 @@ file-sharing-web-backend/
 │   └── validation/
 ├── test/                 # Tests
 ├── docker-compose.yml
+├── docker-compose.local.yml
 ├── Dockerfile
 ├── Makefile
 └── go.mod
@@ -81,43 +82,7 @@ file-sharing-web-backend/
 
 ## 🚀 Cài đặt và Chạy
 
-### Yêu cầu
-- Docker & Docker Compose
-- Go 1.25+ (nếu chạy local)
-
-### Sử dụng Docker (Recommended)
-
-```bash
-# 1. Clone repository
-git clone <repo-url>
-cd file-sharing-web-backend
-
-# 2. Tạo file .env
-cp example.env .env
-# Chỉnh sửa các thông số trong .env
-
-# 3. Khởi chạy
-docker compose up -d
-
-# Database tự động được tạo từ init.sql
-# Server chạy tại http://localhost:8080
-```
-
-### Chạy Local (Development)
-
-```bash
-# 1. Đảm bảo PostgreSQL đang chạy
-docker compose up -d db
-
-# 2. Chạy server
-make server
-```
-
-### Reset Database
-
-```bash
-make docker-reset
-```
+Xem chi tiết tại [Deployment Guide](docs/deployment_guide.md)
 
 ---
 
@@ -145,7 +110,7 @@ Chi tiết về tất cả endpoints có trong:
 ## 🔧 Makefile Commands
 
 ```bash
-make server        # Chạy server development
+make docker-up     # Khởi động docker (tại local)
 make docker-reset  # Reset database (xóa data + khởi động lại)
 make docker-logs   # Xem logs API
 make test          # Chạy tests

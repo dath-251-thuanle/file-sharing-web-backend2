@@ -28,8 +28,6 @@ services:
         condition: service_healthy
     networks:
       - internal
-    ports:
-      - "${API_PORT:-}:8080"
 
   nginx:
     image: nginx:1.27-alpine

@@ -53,27 +53,27 @@ func NewApplication(cfg *config.Config) *Application {
 	if len(cfg.CORS.AllowedOrigins) > 0 {
 		corsConfig.AllowOrigins = cfg.CORS.AllowedOrigins
 	} else {
-		corsConfig.AllowAllOrigins = true 
+		corsConfig.AllowAllOrigins = true
 	}
 
 	r.Use(cors.New(corsConfig))
 
-	if err := database.InitDB(); err != nil {
-		log.Fatalf("unable to connnect to db: %v", err)
+	db, err := database.InitDB(cfg.DatabaseURL)
+	if err != nil {
+		log.Fatalf("unable to connect to db: %v", err)
 	}
 
 	ctx := &ModuleContext{
-		DB: database.DB,
+		DB: db,
 	}
 
 	tokenService := jwt.NewJWTService()
-	authRepo := repository.NewAuthRepository(database.DB)
+	authRepo := repository.NewAuthRepository(db)
 
 	// Khởi tạo Repositories cần thiết
-	fileRepo := repository.NewFileRepository(database.DB)
-	sharedRepo := repository.NewSharedRepository(database.DB)
-
-	userRepo := repository.NewSQLUserRepository(database.DB)
+	fileRepo := repository.NewFileRepository(db)
+	sharedRepo := repository.NewSharedRepository(db)
+	userRepo := repository.NewSQLUserRepository(db)
 
 	// Khởi tạo Storage Service
 	// Cần đảm bảo đường dẫn này đúng với CWD: "cmd/server/uploads"
@@ -95,7 +95,7 @@ func NewApplication(cfg *config.Config) *Application {
 		config:  cfg,
 		router:  r,
 		modules: modules,
-		db:      database.DB,
+		db:      db,
 	}
 }
 

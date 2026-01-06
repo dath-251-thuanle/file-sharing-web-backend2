@@ -10,13 +10,8 @@ import (
 )
 
 func main() {
+	_ = godotenv.Load()
 	log.Println("DATABASE_URL =", os.Getenv("DATABASE_URL"))
-
-	// load .env only in local
-	if os.Getenv("RAILWAY_ENVIRONMENT") == "" {
-		_ = godotenv.Load()
-	}
-
 	cfg := config.NewConfig()
 	application := app.NewApplication(cfg)
 	application.Run()

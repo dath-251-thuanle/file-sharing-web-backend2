@@ -7,19 +7,13 @@ import (
 	"log"
 	"time"
 
-	"github.com/dath-251-thuanle/file-sharing-web-backend2/config"
 	_ "github.com/lib/pq"
 )
 
-var DB *sql.DB
-
-func InitDB() error {
-	connStr := config.NewConfig().DSN()
-
-	var err error
-	DB, err = sql.Open("postgres", connStr)
+func InitDB(dsn string) (*sql.DB, error) {
+	DB, err := sql.Open("postgres", dsn)
 	if err != nil {
-		log.Fatal("unable to use data source name", err)
+		return nil, fmt.Errorf("open db error: %w", err)
 	}
 
 	DB.SetMaxIdleConns(3)                   // Số kết nối nhàn rỗi tối đa
@@ -32,10 +26,10 @@ func InitDB() error {
 
 	if err := DB.PingContext(ctx); err != nil {
 		DB.Close()
-		return fmt.Errorf("DB ping error: %w", err)
+		return nil, fmt.Errorf("DB ping error: %w", err)
 	}
 
 	log.Println("Connected")
 
-	return nil
+	return DB, nil
 }

@@ -1,0 +1,12 @@
+services:
+  api:
+    ports:
+      - "8080:8080"
+    image: file-sharing-api:local
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+  nginx:
+    profiles:
+      - prod

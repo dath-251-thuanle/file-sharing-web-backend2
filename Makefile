@@ -1,11 +1,17 @@
-# Chạy server development
-server:
-	go run ./cmd/server/main.go
+LOCAL = docker-compose.yml -f docker-compose.local.yml
 
-# Reset database (xóa data + khởi động lại)
+# Khởi động docker cho LOCAL
+docker-up:
+	docker compose -f $(LOCAL) up -d --build
+
+# Stop containers
+docker-down:
+	docker compose -f $(LOCAL) down
+
+# Reset DB LOCAL
 docker-reset:
-	docker compose down -v
-	docker compose up -d
+	docker compose -f $(LOCAL) down -v
+	docker compose -f $(LOCAL) up -d --build
 
 # Xem logs API
 docker-logs:
