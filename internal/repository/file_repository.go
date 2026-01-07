@@ -455,7 +455,7 @@ func (r *fileRepository) GetFileDownloadHistory(ctx context.Context, fileID stri
 	for rows.Next() {
 		var time time.Time
 		var d_id string
-		var u_id string
+		var u_id *string
 		if err := rows.Scan(&d_id, &u_id, &time); err != nil {
 			log.Println("Row scan failure")
 			return nil, utils.ResponseMsg(utils.ErrCodeDatabaseError, err.Error())
@@ -464,7 +464,7 @@ func (r *fileRepository) GetFileDownloadHistory(ctx context.Context, fileID stri
 		history.History = append(history.History,
 			domain.Download{
 				DownloadId:        d_id,
-				UserId:            &u_id,
+				UserId:            u_id,
 				Downloader:        nil,
 				DownloadedAt:      time,
 				DownloadCompleted: true,

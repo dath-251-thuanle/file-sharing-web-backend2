@@ -214,7 +214,7 @@ func (fh *FileHandler) GetFileInfoVerbose(ctx *gin.Context) {
 		"fileSize":    file.FileSize,
 		"mimeType":    file.MimeType,
 		"shareToken":  file.ShareToken,
-		"shareLink":   fmt.Sprintf("http://localhost:8080/api/files/%s", file.ShareToken),
+		"shareLink":   fmt.Sprintf("http://localhost:8080/files/%s", file.ShareToken),
 		"isPublic":    file.IsPublic,
 		"hasPassword": file.HasPassword,
 
