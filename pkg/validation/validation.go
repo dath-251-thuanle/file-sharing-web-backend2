@@ -32,7 +32,7 @@ func HandleValidationErrors(err error) gin.H {
 			parts := strings.Split(rawPath, ".")
 
 			for i, part := range parts {
-				if strings.Contains("part", "[") {
+				if strings.Contains(part, "[") {
 					idx := strings.Index(part, "[")
 					base := utils.CamelToSnake(part[:idx])
 					index := part[idx:]
